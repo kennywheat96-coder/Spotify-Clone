@@ -6,6 +6,7 @@ import AudioPlayer from "./components/AudioPlayer";
 import { PlaybackControls } from "./components/PlaybackControls";
 import { QueuePanel } from "./components/QueuePanel";
 import { useEffect, useState } from "react";
+import { AuthInterceptor } from "@/lib/AuthInterceptor";
 
 const MainLayout = () => {
 	const [isMobile, setIsMobile] = useState(false);
@@ -22,6 +23,8 @@ const MainLayout = () => {
 
 	return (
 		<div className='h-screen bg-black text-white flex flex-col'>
+			<AuthInterceptor />
+
 			<ResizablePanelGroup direction='horizontal' className='flex-1 flex h-full overflow-hidden p-2'>
 				<AudioPlayer />
 

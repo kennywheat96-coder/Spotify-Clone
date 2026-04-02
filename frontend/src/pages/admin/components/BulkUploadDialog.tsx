@@ -19,7 +19,7 @@ import { useAxiosWithAuth } from "@/lib/axios";
 import { useMusicStore } from "@/stores/useMusicStore";
 import {
   Upload, X, CheckCircle, Loader2, Music,
-  Image, ChevronDown, ChevronUp, MoveRight
+  Image, ChevronDown, ChevronUp, FolderPlus, Plus
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -27,7 +27,6 @@ import toast from "react-hot-toast";
 interface BulkSong {
   id: string;
   audioFile: File;
-  imageFile: File | null;
   title: string;
   artist: string;
   duration: number;
@@ -37,11 +36,11 @@ interface BulkSong {
 
 interface AlbumGroup {
   id: string;
-  artist: string;
+  name: string;
   songs: BulkSong[];
   isExpanded: boolean;
-  sharedImage: File | null;
-  sharedAlbumId: string;
+  coverImage: File | null;
+  albumId: string;
 }
 
 const parseDuration = (file: File): Promise<number> => {
@@ -60,18 +59,36 @@ const BulkUploadDialog = () => {
   const axiosInstance = useAxiosWithAuth();
   const { albums } = useMusicStore();
   const [open, setOpen] = useState(false);
-  const [songs, setSongs] = useState<BulkSong[]>([]);
   const [groups, setGroups] = useState<AlbumGroup[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [movingSongId, setMovingSongId] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // Force fresh album fetch every time dialog opens
   useEffect(() => {
     if (open) {
       useMusicStore.getState().fetchAlbums();
     }
   }, [open]);
+
+  const createFolder = () => {
+    const name = newFolderName.trim();
+    if (!name) return toast.error("Enter a folder name");
+    if (groups.find((g) => g.name === name)) return toast.error("Folder already exists");
+
+    const newGroup: AlbumGroup = {
+      id: Math.random().toString(36).slice(2),
+      name,
+      songs: [],
+      isExpanded: true,
+      coverImage: null,
+      albumId: "none",
+    };
+
+    setGroups((prev) => [...prev, newGroup]);
+    setActiveGroupId(newGroup.id);
+    setNewFolderName("");
+  };
 
   const fetchCoverArt = async (artist: string, title: string): Promise<File | null> => {
     try {
@@ -90,9 +107,7 @@ const BulkUploadDialog = () => {
     }
   };
 
-  const handleAudioFiles = async (files: FileList) => {
-    const newSongs: BulkSong[] = [];
-
+  const handleAudioFiles = async (files: FileList, targetGroupId: string) => {
     const sortedFiles = Array.from(files).sort((a, b) => {
       const aMatch = a.name.match(/^(\d+)/);
       const bMatch = b.name.match(/^(\d+)/);
@@ -102,7 +117,9 @@ const BulkUploadDialog = () => {
       else return a.lastModified - b.lastModified;
     });
 
-    toast.loading("Reading MP3 tags and fetching covers...", { id: "loading" });
+    toast.loading("Reading MP3 tags...", { id: "loading" });
+
+    const newSongs: BulkSong[] = [];
 
     for (const file of sortedFiles) {
       if (!file.type.startsWith("audio/")) continue;
@@ -110,7 +127,6 @@ const BulkUploadDialog = () => {
       let artist = "";
       let title = "";
       let duration = 180;
-      let imageFile: File | null = null;
 
       try {
         const { parseBlob } = await import("music-metadata-browser");
@@ -118,13 +134,6 @@ const BulkUploadDialog = () => {
         artist = metadata.common.artist || "";
         title = metadata.common.title || "";
         duration = Math.floor(metadata.format.duration || 180);
-
-        const pictures = metadata.common.picture;
-        if (pictures && pictures.length > 0) {
-          const pic = pictures[0];
-          const blob = new Blob([new Uint8Array(pic.data)], { type: pic.format });
-          imageFile = new File([blob], "cover.jpg", { type: pic.format });
-        }
       } catch {
         // Fall back to filename
       }
@@ -137,10 +146,6 @@ const BulkUploadDialog = () => {
         if (!title) title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : withoutTrackNum.trim();
       }
 
-      if (!imageFile && artist && title) {
-        imageFile = await fetchCoverArt(artist, title);
-      }
-
       if (duration === 180) {
         duration = await parseDuration(file);
       }
@@ -148,7 +153,6 @@ const BulkUploadDialog = () => {
       newSongs.push({
         id: Math.random().toString(36).slice(2),
         audioFile: file,
-        imageFile,
         title,
         artist,
         duration,
@@ -157,117 +161,106 @@ const BulkUploadDialog = () => {
       });
     }
 
-    toast.success("Songs loaded!", { id: "loading" });
+    // Auto-fetch cover art for the group if it doesn't have one yet
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== targetGroupId) return g;
+        const updatedSongs = [...g.songs, ...newSongs];
 
-    const allSongs = [...songs, ...newSongs];
-    setSongs(allSongs);
-    rebuildGroups(allSongs);
-  };
+        // Try to fetch cover art from first song if no cover yet
+        if (!g.coverImage && newSongs.length > 0) {
+          const firstSong = newSongs[0];
+          if (firstSong.artist && firstSong.title) {
+            fetchCoverArt(firstSong.artist, firstSong.title).then((coverFile) => {
+              if (coverFile) {
+                setGroups((prev2) =>
+                  prev2.map((g2) =>
+                    g2.id === targetGroupId ? { ...g2, coverImage: coverFile } : g2
+                  )
+                );
+              }
+            });
+          }
+        }
 
-  const rebuildGroups = (allSongs: BulkSong[]) => {
-    const groupMap: { [artist: string]: BulkSong[] } = {};
-    for (const song of allSongs) {
-      const key = song.artist || "Unknown Artist";
-      if (!groupMap[key]) groupMap[key] = [];
-      groupMap[key].push(song);
-    }
-
-    setGroups((prevGroups) =>
-      Object.entries(groupMap).map(([artist, artistSongs]) => {
-        const existing = prevGroups.find((g) => g.artist === artist);
-        return {
-          id: existing?.id ?? Math.random().toString(36).slice(2),
-          artist,
-          songs: artistSongs,
-          isExpanded: existing?.isExpanded ?? true,
-          sharedImage: existing?.sharedImage ?? null,
-          sharedAlbumId: existing?.sharedAlbumId ?? "none",
-        };
+        return { ...g, songs: updatedSongs };
       })
     );
+
+    toast.success(`${newSongs.length} songs added!`, { id: "loading" });
   };
 
   const toggleGroup = (id: string) => {
     setGroups((prev) =>
-      prev.map((g) => g.id === id ? { ...g, isExpanded: !g.isExpanded } : g)
+      prev.map((g) => (g.id === id ? { ...g, isExpanded: !g.isExpanded } : g))
     );
   };
 
-  const applyImageToGroup = (id: string, artist: string, file: File) => {
+  const setCoverImage = (groupId: string, file: File) => {
     setGroups((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, sharedImage: file } : g))
-    );
-    setSongs((prev) =>
-      prev.map((s) => (s.artist === artist ? { ...s, imageFile: file } : s))
+      prev.map((g) => (g.id === groupId ? { ...g, coverImage: file } : g))
     );
   };
 
-  const applyAlbumToGroup = (id: string, artist: string, albumId: string) => {
+  const setGroupAlbum = (groupId: string, albumId: string) => {
     setGroups((prev) =>
-      prev.map((g) => g.id === id ? { ...g, sharedAlbumId: albumId } : g)
-    );
-    setSongs((prev) =>
-      prev.map((s) => (s.artist === artist ? { ...s, albumId } : s))
+      prev.map((g) => (g.id === groupId ? { ...g, albumId } : g))
     );
   };
 
-  const renameGroup = (id: string, oldArtist: string, newArtist: string) => {
-    setSongs((prev) =>
-      prev.map((s) => (s.artist === oldArtist ? { ...s, artist: newArtist } : s))
-    );
+  const renameGroup = (id: string, newName: string) => {
     setGroups((prev) =>
-      prev.map((g) => g.id === id ? { ...g, artist: newArtist } : g)
+      prev.map((g) => (g.id === id ? { ...g, name: newName } : g))
     );
   };
 
-  const removeGroup = (artist: string) => {
-    const updated = songs.filter((s) => s.artist !== artist);
-    setSongs(updated);
-    rebuildGroups(updated);
+  const removeGroup = (id: string) => {
+    setGroups((prev) => prev.filter((g) => g.id !== id));
+    if (activeGroupId === id) setActiveGroupId(null);
   };
 
-  const updateSongField = (id: string, field: string, value: string) => {
-    setSongs((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
-    );
+  const updateSongField = (groupId: string, songId: string, field: string, value: string) => {
     setGroups((prev) =>
-      prev.map((g) => ({
-        ...g,
-        songs: g.songs.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
-      }))
+      prev.map((g) =>
+        g.id === groupId
+          ? { ...g, songs: g.songs.map((s) => (s.id === songId ? { ...s, [field]: value } : s)) }
+          : g
+      )
     );
   };
 
-  const removeSong = (id: string) => {
-    const updated = songs.filter((s) => s.id !== id);
-    setSongs(updated);
-    rebuildGroups(updated);
-  };
-
-  const moveSongToGroup = (songId: string, newArtist: string) => {
-    const updated = songs.map((s) =>
-      s.id === songId ? { ...s, artist: newArtist } : s
+  const removeSong = (groupId: string, songId: string) => {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId ? { ...g, songs: g.songs.filter((s) => s.id !== songId) } : g
+      )
     );
-    setSongs(updated);
-    rebuildGroups(updated);
-    setMovingSongId(null);
-    toast.success(`Song moved to ${newArtist}`);
   };
 
   const uploadAll = async () => {
-    const pending = songs.filter((s) => s.status === "pending");
-    if (pending.length === 0) return toast.error("No songs to upload");
+    const allPending = groups.flatMap((g) =>
+      g.songs.filter((s) => s.status === "pending").map((s) => ({ ...s, group: g }))
+    );
 
-    const missing = pending.filter((s) => !s.imageFile);
-    if (missing.length > 0) {
-      return toast.error(`${missing.length} songs missing cover images`);
+    if (allPending.length === 0) return toast.error("No songs to upload");
+
+    const missingCover = groups.filter(
+      (g) => !g.coverImage && g.songs.some((s) => s.status === "pending")
+    );
+    if (missingCover.length > 0) {
+      return toast.error(`${missingCover.map((g) => g.name).join(", ")} missing cover image`);
     }
 
     setIsUploading(true);
 
-    for (const song of pending) {
-      setSongs((prev) =>
-        prev.map((s) => (s.id === song.id ? { ...s, status: "uploading" } : s))
+    for (const { group, ...song } of allPending) {
+      // Mark uploading
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === group.id
+            ? { ...g, songs: g.songs.map((s) => (s.id === song.id ? { ...s, status: "uploading" } : s)) }
+            : g
+        )
       );
 
       try {
@@ -275,22 +268,30 @@ const BulkUploadDialog = () => {
         formData.append("title", song.title);
         formData.append("artist", song.artist);
         formData.append("duration", song.duration.toString());
-        if (song.albumId && song.albumId !== "none") {
-          formData.append("albumId", song.albumId);
+        if (group.albumId && group.albumId !== "none") {
+          formData.append("albumId", group.albumId);
         }
         formData.append("audioFile", song.audioFile);
-        formData.append("imageFile", song.imageFile!);
+        formData.append("imageFile", group.coverImage!);
 
         await axiosInstance.post("/admin/songs", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
-        setSongs((prev) =>
-          prev.map((s) => (s.id === song.id ? { ...s, status: "done" } : s))
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === group.id
+              ? { ...g, songs: g.songs.map((s) => (s.id === song.id ? { ...s, status: "done" } : s)) }
+              : g
+          )
         );
       } catch {
-        setSongs((prev) =>
-          prev.map((s) => (s.id === song.id ? { ...s, status: "error" } : s))
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === group.id
+              ? { ...g, songs: g.songs.map((s) => (s.id === song.id ? { ...s, status: "error" } : s)) }
+              : g
+          )
         );
       }
     }
@@ -299,9 +300,15 @@ const BulkUploadDialog = () => {
     toast.success("Bulk upload complete!");
   };
 
-  const pendingCount = songs.filter((s) => s.status === "pending").length;
-  const doneCount = songs.filter((s) => s.status === "done").length;
-  const artistNames = groups.map((g) => g.artist);
+  const totalPending = groups.reduce(
+    (acc, g) => acc + g.songs.filter((s) => s.status === "pending").length,
+    0
+  );
+  const totalDone = groups.reduce(
+    (acc, g) => acc + g.songs.filter((s) => s.status === "done").length,
+    0
+  );
+  const totalSongs = groups.reduce((acc, g) => acc + g.songs.length, 0);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -317,42 +324,35 @@ const BulkUploadDialog = () => {
           <DialogTitle>Bulk Upload Songs</DialogTitle>
         </DialogHeader>
 
-        {/* Drop zone */}
-        <div
-          className='border-2 border-dashed border-zinc-600 rounded-lg p-8 text-center cursor-pointer hover:border-emerald-500 transition-colors'
-          onClick={() => audioInputRef.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (e.dataTransfer.files) handleAudioFiles(e.dataTransfer.files);
-          }}
-        >
-          <Music className='h-10 w-10 text-zinc-400 mx-auto mb-3' />
-          <p className='text-white font-medium'>Drop MP3 files here or click to browse</p>
-          <p className='text-zinc-400 text-sm mt-1'>
-            Cover art and metadata auto-detected from MP3 tags 🎵
-          </p>
-          <input
-            ref={audioInputRef}
-            type='file'
-            accept='audio/*'
-            multiple
-            hidden
-            onChange={(e) => e.target.files && handleAudioFiles(e.target.files)}
+        {/* Create folder row */}
+        <div className='flex gap-2'>
+          <Input
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && createFolder()}
+            placeholder='New folder name (e.g. Drake - For All The Dogs)'
+            className='bg-zinc-800 border-zinc-600 text-white'
           />
+          <Button
+            onClick={createFolder}
+            className='bg-emerald-600 hover:bg-emerald-700 text-white flex-shrink-0'
+          >
+            <FolderPlus className='h-4 w-4 mr-1' />
+            Create
+          </Button>
         </div>
 
         {/* Stats + Upload All */}
-        {songs.length > 0 && (
+        {totalSongs > 0 && (
           <div className='flex items-center justify-between px-1'>
             <p className='text-sm text-zinc-400'>
-              {songs.length} songs • {doneCount} uploaded • {pendingCount} pending
+              {totalSongs} songs • {totalDone} uploaded • {totalPending} pending
             </p>
             <div className='flex gap-2'>
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => { setSongs([]); setGroups([]); }}
+                onClick={() => setGroups([])}
                 disabled={isUploading}
               >
                 Clear All
@@ -361,7 +361,7 @@ const BulkUploadDialog = () => {
                 size='sm'
                 className='bg-emerald-500 hover:bg-emerald-600 text-black'
                 onClick={uploadAll}
-                disabled={isUploading || pendingCount === 0}
+                disabled={isUploading || totalPending === 0}
               >
                 {isUploading ? (
                   <>
@@ -369,16 +369,23 @@ const BulkUploadDialog = () => {
                     Uploading...
                   </>
                 ) : (
-                  `Upload All (${pendingCount})`
+                  `Upload All (${totalPending})`
                 )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Grouped song list */}
-        <ScrollArea className='max-h-[50vh]'>
+        {/* Folders */}
+        <ScrollArea className='max-h-[55vh]'>
           <div className='space-y-4 pr-2'>
+            {groups.length === 0 && (
+              <div className='text-center py-10 text-zinc-500'>
+                <FolderPlus className='h-10 w-10 mx-auto mb-3 opacity-30' />
+                <p>Create a folder above, then add songs to it</p>
+              </div>
+            )}
+
             {groups.map((group) => (
               <div
                 key={group.id}
@@ -387,50 +394,54 @@ const BulkUploadDialog = () => {
                 {/* Group header */}
                 <div className='flex items-center gap-3 p-3 bg-zinc-800'>
 
-                  {/* Group cover image */}
+                  {/* Cover image picker */}
                   <div
-                    className='w-12 h-12 rounded-md border-2 border-dashed border-zinc-600 flex items-center justify-center cursor-pointer hover:border-emerald-500 flex-shrink-0 overflow-hidden'
+                    className='w-14 h-14 rounded-md border-2 border-dashed border-zinc-600 flex items-center justify-center cursor-pointer hover:border-emerald-500 flex-shrink-0 overflow-hidden transition-colors'
                     onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";
                       input.accept = "image/*";
                       input.onchange = (e) => {
                         const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) applyImageToGroup(group.id, group.artist, file);
+                        if (file) setCoverImage(group.id, file);
                       };
                       input.click();
                     }}
+                    title='Click to set cover image for all songs in this folder'
                   >
-                    {group.sharedImage ? (
+                    {group.coverImage ? (
                       <img
-                        src={URL.createObjectURL(group.sharedImage)}
+                        src={URL.createObjectURL(group.coverImage)}
                         alt='cover'
                         className='w-full h-full object-cover'
                       />
                     ) : (
-                      <Image className='h-4 w-4 text-zinc-500' />
+                      <div className='flex flex-col items-center gap-1'>
+                        <Image className='h-4 w-4 text-zinc-500' />
+                        <span className='text-[9px] text-zinc-500'>Cover</span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Artist name editor */}
+                  {/* Folder name + song count */}
                   <div className='flex-1'>
                     <Input
-                      value={group.artist}
-                      onChange={(e) => renameGroup(group.id, group.artist, e.target.value)}
+                      value={group.name}
+                      onChange={(e) => renameGroup(group.id, e.target.value)}
                       className='bg-zinc-700 border-zinc-600 h-7 text-sm font-medium text-white mb-0.5'
-                      placeholder='Artist name'
+                      placeholder='Folder name'
                       disabled={isUploading}
                     />
                     <p className='text-xs text-zinc-400'>{group.songs.length} songs</p>
                   </div>
 
-                  {/* Apply album to all */}
+                  {/* Album selector */}
                   <Select
-                    value={group.sharedAlbumId}
-                    onValueChange={(value) => applyAlbumToGroup(group.id, group.artist, value)}
+                    value={group.albumId}
+                    onValueChange={(value) => setGroupAlbum(group.id, value)}
                   >
                     <SelectTrigger className='bg-zinc-700 border-zinc-600 h-8 text-xs w-44'>
-                      <SelectValue placeholder='Apply album to all' />
+                      <SelectValue placeholder='Assign album' />
                     </SelectTrigger>
                     <SelectContent className='bg-zinc-800 border-zinc-700'>
                       <ScrollArea className='max-h-48'>
@@ -444,10 +455,23 @@ const BulkUploadDialog = () => {
                     </SelectContent>
                   </Select>
 
+                  {/* Add songs button */}
+                  <button
+                    onClick={() => {
+                      setActiveGroupId(group.id);
+                      audioInputRef.current?.click();
+                    }}
+                    className='text-zinc-400 hover:text-emerald-400 transition-colors'
+                    title='Add songs to this folder'
+                    disabled={isUploading}
+                  >
+                    <Plus className='h-4 w-4' />
+                  </button>
+
                   {/* Delete group */}
                   <button
-                    onClick={() => removeGroup(group.artist)}
-                    className='text-zinc-500 hover:text-red-400 transition-colors ml-1'
+                    onClick={() => removeGroup(group.id)}
+                    className='text-zinc-500 hover:text-red-400 transition-colors'
                     disabled={isUploading}
                   >
                     <X className='h-4 w-4' />
@@ -466,9 +490,36 @@ const BulkUploadDialog = () => {
                   </button>
                 </div>
 
-                {/* Songs in group */}
-                {group.isExpanded && (
-                  <div className='space-y-2 p-3'>
+                {/* Drop zone inside group */}
+                {group.isExpanded && group.songs.length === 0 && (
+                  <div
+                    className='m-3 border-2 border-dashed border-zinc-700 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 transition-colors'
+                    onClick={() => {
+                      setActiveGroupId(group.id);
+                      audioInputRef.current?.click();
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setActiveGroupId(group.id);
+                      if (e.dataTransfer.files) handleAudioFiles(e.dataTransfer.files, group.id);
+                    }}
+                  >
+                    <Music className='h-6 w-6 text-zinc-500 mx-auto mb-2' />
+                    <p className='text-zinc-400 text-sm'>Drop MP3s here or click + to add songs</p>
+                  </div>
+                )}
+
+                {/* Songs list */}
+                {group.isExpanded && group.songs.length > 0 && (
+                  <div
+                    className='space-y-2 p-3'
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (e.dataTransfer.files) handleAudioFiles(e.dataTransfer.files, group.id);
+                    }}
+                  >
                     {group.songs.map((song) => (
                       <div
                         key={song.id}
@@ -481,117 +532,50 @@ const BulkUploadDialog = () => {
                         }`}
                       >
                         <div className='flex items-center gap-3'>
-
-                          {/* Individual song cover */}
-                          <div
-                            className='w-10 h-10 rounded-md border border-zinc-600 flex items-center justify-center cursor-pointer hover:border-emerald-500 flex-shrink-0 overflow-hidden'
-                            onClick={() => {
-                              const input = document.createElement("input");
-                              input.type = "file";
-                              input.accept = "image/*";
-                              input.onchange = (e) => {
-                                const file = (e.target as HTMLInputElement).files?.[0];
-                                if (file) {
-                                  setSongs((prev) =>
-                                    prev.map((s) =>
-                                      s.id === song.id ? { ...s, imageFile: file } : s
-                                    )
-                                  );
-                                }
-                              };
-                              input.click();
-                            }}
-                          >
-                            {song.imageFile ? (
-                              <img
-                                src={URL.createObjectURL(song.imageFile)}
-                                alt='cover'
-                                className='w-full h-full object-cover'
-                              />
-                            ) : (
-                              <Upload className='h-3 w-3 text-zinc-500' />
-                            )}
-                          </div>
-
-                          {/* Title & Duration */}
                           <div className='flex-1 grid grid-cols-2 gap-2'>
                             <div>
                               <label className='text-xs text-zinc-400'>Title</label>
                               <Input
                                 value={song.title}
-                                onChange={(e) => updateSongField(song.id, "title", e.target.value)}
+                                onChange={(e) => updateSongField(group.id, song.id, "title", e.target.value)}
                                 className='bg-zinc-700 border-zinc-600 h-7 text-xs mt-0.5'
-                                disabled={song.status === "done"}
+                                disabled={song.status === "done" || isUploading}
                               />
                             </div>
                             <div>
-                              <label className='text-xs text-zinc-400'>Duration (sec)</label>
+                              <label className='text-xs text-zinc-400'>Artist</label>
                               <Input
-                                value={song.duration}
-                                onChange={(e) => updateSongField(song.id, "duration", e.target.value)}
+                                value={song.artist}
+                                onChange={(e) => updateSongField(group.id, song.id, "artist", e.target.value)}
                                 className='bg-zinc-700 border-zinc-600 h-7 text-xs mt-0.5'
-                                type='number'
-                                disabled={song.status === "done"}
+                                disabled={song.status === "done" || isUploading}
                               />
                             </div>
                           </div>
 
-                          {/* Status move & remove */}
-                          <div className='flex items-center gap-2 flex-shrink-0'>
-                            {song.status === "done" && (
-                              <CheckCircle className='h-4 w-4 text-emerald-500' />
-                            )}
-                            {song.status === "uploading" && (
-                              <Loader2 className='h-4 w-4 text-blue-400 animate-spin' />
-                            )}
-                            {song.status === "error" && (
-                              <span className='text-xs text-red-400'>Error</span>
-                            )}
+                          <div className='w-20'>
+                            <label className='text-xs text-zinc-400'>Duration</label>
+                            <Input
+                              value={song.duration}
+                              onChange={(e) => updateSongField(group.id, song.id, "duration", e.target.value)}
+                              className='bg-zinc-700 border-zinc-600 h-7 text-xs mt-0.5'
+                              type='number'
+                              disabled={song.status === "done" || isUploading}
+                            />
+                          </div>
+
+                          <div className='flex items-center gap-2 flex-shrink-0 mt-3'>
+                            {song.status === "done" && <CheckCircle className='h-4 w-4 text-emerald-500' />}
+                            {song.status === "uploading" && <Loader2 className='h-4 w-4 text-blue-400 animate-spin' />}
+                            {song.status === "error" && <span className='text-xs text-red-400'>Error</span>}
                             {song.status !== "done" && (
-                              <>
-                                {/* Move to group */}
-                                {artistNames.length > 1 && (
-                                  <div className='relative'>
-                                    <button
-                                      onClick={() => setMovingSongId(
-                                        movingSongId === song.id ? null : song.id
-                                      )}
-                                      className='text-zinc-400 hover:text-blue-400 transition-colors'
-                                      title='Move to different group'
-                                    >
-                                      <MoveRight className='h-3 w-3' />
-                                    </button>
-
-                                    {movingSongId === song.id && (
-                                      <div className='absolute right-0 bottom-6 bg-zinc-700 border border-zinc-600 rounded-md shadow-xl z-50 min-w-[150px]'>
-                                        <p className='text-xs text-zinc-400 px-2 py-1 border-b border-zinc-600'>
-                                          Move to:
-                                        </p>
-                                        {artistNames
-                                          .filter((a) => a !== group.artist)
-                                          .map((artist) => (
-                                            <button
-                                              key={artist}
-                                              onClick={() => moveSongToGroup(song.id, artist)}
-                                              className='w-full text-left px-3 py-1.5 text-xs text-white hover:bg-zinc-600 transition-colors'
-                                            >
-                                              {artist}
-                                            </button>
-                                          ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Remove song */}
-                                <button
-                                  onClick={() => removeSong(song.id)}
-                                  className='text-zinc-500 hover:text-red-400'
-                                  disabled={isUploading}
-                                >
-                                  <X className='h-3 w-3' />
-                                </button>
-                              </>
+                              <button
+                                onClick={() => removeSong(group.id, song.id)}
+                                className='text-zinc-500 hover:text-red-400'
+                                disabled={isUploading}
+                              >
+                                <X className='h-3 w-3' />
+                              </button>
                             )}
                           </div>
                         </div>
@@ -603,6 +587,21 @@ const BulkUploadDialog = () => {
             ))}
           </div>
         </ScrollArea>
+
+        {/* Hidden file input */}
+        <input
+          ref={audioInputRef}
+          type='file'
+          accept='audio/*'
+          multiple
+          hidden
+          onChange={(e) => {
+            if (e.target.files && activeGroupId) {
+              handleAudioFiles(e.target.files, activeGroupId);
+              e.target.value = "";
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

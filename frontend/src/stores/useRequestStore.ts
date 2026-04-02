@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { axiosInstance } from "@/lib/axios";
 
 interface SongRequest {
   _id: string;
@@ -33,8 +34,7 @@ export const useRequestStore = create<RequestStore>((set) => ({
   fetchAllRequests: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/requests");
-      const data = await res.json();
+      const { data } = await axiosInstance.get("/requests");
       set({ requests: data });
     } finally {
       set({ isLoading: false });
@@ -44,8 +44,7 @@ export const useRequestStore = create<RequestStore>((set) => ({
   fetchMyRequests: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/requests/my");
-      const data = await res.json();
+      const { data } = await axiosInstance.get("/requests/my");
       set({ myRequests: data });
     } finally {
       set({ isLoading: false });
@@ -53,29 +52,19 @@ export const useRequestStore = create<RequestStore>((set) => ({
   },
 
   createRequest: async (data) => {
-    const res = await fetch("/api/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const newRequest = await res.json();
+    const { data: newRequest } = await axiosInstance.post("/requests", data);
     set((s) => ({ myRequests: [newRequest, ...s.myRequests] }));
   },
 
   updateStatus: async (id, status) => {
-    const res = await fetch(`/api/requests/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    const updated = await res.json();
+    const { data: updated } = await axiosInstance.put(`/requests/${id}`, { status });
     set((s) => ({
       requests: s.requests.map((r) => (r._id === id ? updated : r)),
     }));
   },
 
   deleteRequest: async (id) => {
-    await fetch(`/api/requests/${id}`, { method: "DELETE" });
+    await axiosInstance.delete(`/requests/${id}`);
     set((s) => ({
       requests: s.requests.filter((r) => r._id !== id),
     }));

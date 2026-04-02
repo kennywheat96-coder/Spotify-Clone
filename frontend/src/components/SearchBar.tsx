@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, X, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { SongContextMenu } from "./SongContextMenu";
+import { axiosInstance } from "@/lib/axios";
 import type { Song } from "@/types";
 
 export const SearchBar = () => {
@@ -14,7 +15,6 @@ export const SearchBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load playlists so context menu has data
   useEffect(() => {
     fetchPlaylists();
   }, [fetchPlaylists]);
@@ -30,8 +30,7 @@ export const SearchBar = () => {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/songs/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
+        const { data } = await axiosInstance.get(`/songs/search?q=${encodeURIComponent(query)}`);
         setResults(data);
         setIsOpen(true);
       } catch (err) {
@@ -63,7 +62,6 @@ export const SearchBar = () => {
 
   return (
     <div ref={containerRef} className="relative w-full max-w-md">
-      {/* Input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input

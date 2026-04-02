@@ -9,6 +9,8 @@ import AlbumPage from "./pages/album/AlbumPage";
 import AdminPage from "./pages/admin/AdminPage";
 import PlaylistPage from "./pages/Playlist/PlaylistPage";
 import LikedSongsPage from "./pages/liked/LikedSongsPage";
+import LibraryPage from "./pages/library/LibraryPage";
+import SearchPage from "./pages/search/SearchPage";
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
 import { PageTransition } from "./components/PageTransition";
@@ -33,6 +35,8 @@ function App() {
             <Route path='/albums/:albumId' element={<PageTransition><AlbumPage /></PageTransition>} />
             <Route path='/playlists/:playlistId' element={<PageTransition><PlaylistPage /></PageTransition>} />
             <Route path='/liked' element={<PageTransition><LikedSongsPage /></PageTransition>} />
+            <Route path='/library' element={<PageTransition><LibraryPage /></PageTransition>} />
+            <Route path='/search' element={<PageTransition><SearchPage /></PageTransition>} />
             <Route path='*' element={<PageTransition><NotFoundPage /></PageTransition>} />
           </Route>
         </Routes>

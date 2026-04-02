@@ -1,43 +1,51 @@
-import { SignedOut, UserButton } from "@clerk/clerk-react";
-import { LayoutDashboardIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import SignInOAuthButtons from "@/components/SigninOAuthButtons";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
+import { SearchBar } from "../SearchBar";
+import { LayoutDashboardIcon } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { buttonVariants } from "./button";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import { SearchBar } from "@/components/SearchBar";
 
 const Topbar = () => {
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, checkAdminStatus } = useAuthStore();
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]);
 
   return (
     <div className='flex items-center justify-between p-4 sticky top-0 bg-zinc-900/75 backdrop-blur-md z-10'>
-      
-      {/* Left — Logo */}
       <div className='flex gap-2 items-center'>
         <img src='/spotify.png' className='size-8' alt='Spotify logo' />
-        Spotify
+        <span className='font-semibold hidden sm:block'>Spotify but Better</span>
       </div>
 
-      {/* Center — Search */}
-      <div className='flex-1 flex justify-center px-8 max-w-xl mx-auto'>
+      {/* Search bar — hidden on mobile */}
+      <div className='hidden sm:block flex-1 max-w-md mx-4'>
         <SearchBar />
       </div>
 
-      {/* Right — Admin + Auth */}
       <div className='flex items-center gap-4'>
         {isAdmin && (
-          <Link to={"/admin"} className={cn(buttonVariants({ variant: "outline" }))}>
-            <LayoutDashboardIcon className='size-4 mr-2' />
-            Admin Dashboard
+          <Link
+            to='/admin'
+            className={cn(buttonVariants({ variant: "outline" }), "hidden sm:flex gap-1")}
+          >
+            <LayoutDashboardIcon className='size-4 mr-1' />
+            Admin
           </Link>
         )}
 
         <SignedOut>
-          <SignInOAuthButtons />
+          <SignInButton mode='modal'>
+            <button className={cn(buttonVariants({ variant: "outline" }))}>Sign in</button>
+          </SignInButton>
         </SignedOut>
 
-        <UserButton />
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
       </div>
     </div>
   );

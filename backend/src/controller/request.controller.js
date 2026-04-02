@@ -27,6 +27,7 @@ export const createRequest = async (req, res, next) => {
 // Admin gets all requests
 export const getAllRequests = async (req, res, next) => {
   try {
+    console.log("getAllRequests hit");
     const requests = await Request.find().sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {

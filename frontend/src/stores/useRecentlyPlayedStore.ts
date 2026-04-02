@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Song } from "@/types";
+import { axiosInstance } from "@/lib/axios";
 
 interface RecentlyPlayedStore {
   recentlyPlayed: Song[];
@@ -15,8 +16,7 @@ export const useRecentlyPlayedStore = create<RecentlyPlayedStore>((set) => ({
   fetchRecentlyPlayed: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/users/recently-played");
-      const data = await res.json();
+      const { data } = await axiosInstance.get("/users/recently-played");
       set({ recentlyPlayed: data });
     } finally {
       set({ isLoading: false });
@@ -25,9 +25,7 @@ export const useRecentlyPlayedStore = create<RecentlyPlayedStore>((set) => ({
 
   addRecentlyPlayed: async (songId) => {
     try {
-      await fetch(`/api/users/recently-played/${songId}`, {
-        method: "POST",
-      });
+      await axiosInstance.post(`/users/recently-played/${songId}`);
     } catch (err) {
       console.error("Failed to track recently played:", err);
     }

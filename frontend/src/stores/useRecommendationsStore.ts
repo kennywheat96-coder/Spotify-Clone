@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Song } from "@/types";
+import { axiosInstance } from "@/lib/axios";
 
 interface RecommendationsStore {
   recommendations: Song[];
@@ -14,8 +15,7 @@ export const useRecommendationsStore = create<RecommendationsStore>((set) => ({
   fetchRecommendations: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/users/recommendations");
-      const data = await res.json();
+      const { data } = await axiosInstance.get("/users/recommendations");
       set({ recommendations: data });
     } finally {
       set({ isLoading: false });

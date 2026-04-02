@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Song } from "@/types";
+import { axiosInstance } from "@/lib/axios";
 
 interface LikedStore {
   likedSongs: Song[];
@@ -20,8 +21,7 @@ export const useLikedStore = create<LikedStore>((set, get) => ({
   fetchLikedSongs: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/users/liked-songs");
-      const data = await res.json();
+      const { data } = await axiosInstance.get("/users/liked-songs");
       set({
         likedSongs: data,
         likedIds: new Set(data.map((s: Song) => s._id)),
@@ -32,10 +32,7 @@ export const useLikedStore = create<LikedStore>((set, get) => ({
   },
 
   likeSong: async (songId) => {
-    const res = await fetch(`/api/users/liked-songs/${songId}`, {
-      method: "POST",
-    });
-    const data = await res.json();
+    const { data } = await axiosInstance.post(`/users/liked-songs/${songId}`);
     set({
       likedSongs: data,
       likedIds: new Set(data.map((s: Song) => s._id)),
@@ -43,10 +40,7 @@ export const useLikedStore = create<LikedStore>((set, get) => ({
   },
 
   unlikeSong: async (songId) => {
-    const res = await fetch(`/api/users/liked-songs/${songId}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
+    const { data } = await axiosInstance.delete(`/users/liked-songs/${songId}`);
     set({
       likedSongs: data,
       likedIds: new Set(data.map((s: Song) => s._id)),

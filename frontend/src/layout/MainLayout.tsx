@@ -32,21 +32,18 @@ const MainLayout = () => {
           <ResizablePanelGroup direction='horizontal' className='flex-1 flex h-full overflow-hidden p-2'>
             <AudioPlayer />
 
-            {/* Left sidebar */}
             <ResizablePanel defaultSize={20} minSize={10} maxSize={30}>
               <LeftSidebar />
             </ResizablePanel>
 
             <ResizableHandle className='w-2 bg-black rounded-lg transition-colors' />
 
-            {/* Main content */}
             <ResizablePanel defaultSize={60}>
               <Outlet />
             </ResizablePanel>
 
             <ResizableHandle className='w-2 bg-black rounded-lg transition-colors' />
 
-            {/* Right sidebar */}
             <ResizablePanel defaultSize={20} minSize={0} maxSize={25} collapsedSize={0}>
               <FriendsActivity />
             </ResizablePanel>
@@ -62,15 +59,13 @@ const MainLayout = () => {
         <>
           <AudioPlayer />
 
-          {/* Main scrollable content — padded so it clears player + nav */}
+          {/* Main scrollable content — padded so it clears mini player + nav */}
           <div className='flex-1 overflow-y-auto pb-36'>
             <Outlet />
           </div>
 
-          {/* Player bar sits above bottom nav */}
-          <div className='fixed bottom-16 left-0 right-0 z-40'>
-            <PlaybackControls />
-          </div>
+          {/* PlaybackControls renders the mobile mini player internally */}
+          <PlaybackControls />
 
           <MobileBottomNav />
         </>

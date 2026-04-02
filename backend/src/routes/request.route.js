@@ -12,7 +12,10 @@ const router = Router();
 
 router.post("/", protectRoute, createRequest);
 router.get("/my", protectRoute, getMyRequests);
-router.get("/", protectRoute, requireAdmin, getAllRequests);
+router.get("/", protectRoute, (req, res, next) => {
+  console.log("GET /requests - auth:", req.auth());
+  next();
+}, requireAdmin, getAllRequests);
 router.put("/:id", protectRoute, requireAdmin, updateRequestStatus);
 router.delete("/:id", protectRoute, requireAdmin, deleteRequest);
 

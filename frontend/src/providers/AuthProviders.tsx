@@ -4,6 +4,7 @@ import { useChatStore } from "@/stores/useChatStore";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MascotWheelDialog } from "@/components/MascotWheelDialog";
 
 const updateApiToken = (token: string | null) => {
   if (token) axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -14,6 +15,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { getToken, userId } = useAuth();
   const { user, isLoaded } = useUser();
   const [loading, setLoading] = useState(true);
+  const [showWheel, setShowWheel] = useState(false);
   const { checkAdminStatus } = useAuthStore();
   const { initSocket, disconnectSocket } = useChatStore();
 
@@ -25,11 +27,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (token && userId && isLoaded && user) {
           await checkAdminStatus();
-          if (userId) initSocket(userId);
+          initSocket(userId);
 
-          // Sync user to MongoDB on every sign in
+          // Sync user to MongoDB
           try {
-            await fetch("https://spotify-clone-q2iy.onrender.com/api/auth/callback", {
+            const res = await fetch("https://spotify-clone-q2iy.onrender.com/api/auth/callback", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -39,6 +41,12 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 imageUrl: user.imageUrl,
               }),
             });
+            const data = await res.json();
+
+            // Show mascot wheel for new users with no mascot
+            if (data.isNewUser && !data.mascot) {
+              setShowWheel(true);
+            }
           } catch (err) {
             console.log("Error syncing user:", err);
           }
@@ -56,12 +64,26 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => disconnectSocket();
   }, [getToken, userId, isLoaded, user, checkAdminStatus, initSocket, disconnectSocket]);
 
+  const handleMascotClaimed = async (mascotId: string) => {
+    try {
+      await axiosInstance.post("/users/mascot", { mascot: mascotId });
+    } catch (error) {
+      console.log("Error saving mascot", error);
+    } finally {
+      setShowWheel(false);
+    }
+  };
+
   if (loading)
     return (
       <div className='h-screen w-full flex items-center justify-center'>
         <Loader className='size-8 text-emerald-500 animate-spin' />
       </div>
     );
+
+  if (showWheel) {
+    return <MascotWheelDialog onComplete={handleMascotClaimed} />;
+  }
 
   return <>{children}</>;
 };

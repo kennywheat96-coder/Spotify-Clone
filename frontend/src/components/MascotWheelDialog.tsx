@@ -294,8 +294,7 @@ export const MascotWheelDialog = ({ onComplete }: MascotWheelDialogProps) => {
   };
 
   return (
-    <div className='fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
-      <motion.div
+<div className='fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4'>      <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className='bg-zinc-900 border border-zinc-700 rounded-2xl p-8 max-w-md w-full text-center'

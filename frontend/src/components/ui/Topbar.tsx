@@ -30,7 +30,7 @@ const Topbar = () => {
         {isAdmin && (
           <Link
             to='/admin'
-            className={cn(buttonVariants({ variant: "outline" }), "hidden sm:flex gap-1")}
+            className={cn(buttonVariants({ variant: "outline" }), "flex gap-1")}
           >
             <LayoutDashboardIcon className='size-4 mr-1' />
             Admin

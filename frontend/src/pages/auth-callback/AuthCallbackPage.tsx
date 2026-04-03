@@ -1,10 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { axiosInstance } from "@/lib/axios";
 import { useUser } from "@clerk/clerk-react";
 import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MascotWheelDialog } from "@/components/MascotWheelDialog";
+import { axiosInstance } from "@/lib/axios";
 
 const AuthCallbackPage = () => {
   const { isLoaded, user } = useUser();
@@ -19,16 +19,21 @@ const AuthCallbackPage = () => {
       try {
         syncAttempted.current = true;
 
-     const res = await axiosInstance.post("/auth/callback", {
-  id: user.id,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  imageUrl: user.imageUrl,
-});
-console.log("Auth callback response:", res.data);
+        const res = await fetch("https://spotify-clone-q2iy.onrender.com/api/auth/callback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            imageUrl: user.imageUrl,
+          }),
+        });
 
-        // Show wheel only if brand new user with no mascot
-        if (res.data.isNewUser && !res.data.mascot) {
+        const data = await res.json();
+        console.log("Auth callback response:", data);
+
+        if (data.isNewUser && !data.mascot) {
           setShowWheel(true);
         } else {
           navigate("/");

@@ -9,6 +9,7 @@ import RequestsTabContent from "./components/RequestsTabContent";
 import { useEffect } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { useRequestStore } from "@/stores/useRequestStore";
+import { AuthInterceptor } from "@/lib/AuthInterceptor";
 
 const AdminPage = () => {
   const { isAdmin, isLoading } = useAuthStore();
@@ -28,6 +29,7 @@ const AdminPage = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-900 to-black text-zinc-100 p-8'>
+      <AuthInterceptor />
       <Header />
       <DashboardStats />
 

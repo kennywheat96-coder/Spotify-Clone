@@ -12,10 +12,16 @@ import { useRequestStore } from "@/stores/useRequestStore";
 import { AuthInterceptor } from "@/lib/AuthInterceptor";
 
 const AdminPage = () => {
-  const { isAdmin, isLoading } = useAuthStore();
+  const { isAdmin, isLoading, checkAdminStatus } = useAuthStore();
   const { fetchAlbums, fetchSongs, fetchStats } = useMusicStore();
   const { requests, fetchAllRequests } = useRequestStore();
 
+  // Step 1: check admin status on mount
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]);
+
+  // Step 2: once confirmed admin, fetch data
   useEffect(() => {
     if (!isAdmin) return;
     fetchAlbums();
@@ -24,7 +30,17 @@ const AdminPage = () => {
     fetchAllRequests();
   }, [isAdmin, fetchAlbums, fetchSongs, fetchStats, fetchAllRequests]);
 
-  if (!isAdmin && !isLoading) return <div>Unauthorized</div>;
+  if (isLoading) return (
+    <div className='min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-900 to-black flex items-center justify-center'>
+      <div className='text-zinc-400'>Loading...</div>
+    </div>
+  );
+
+  if (!isAdmin) return (
+    <div className='min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-900 to-black flex items-center justify-center'>
+      <div className='text-zinc-400'>Unauthorized</div>
+    </div>
+  );
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
 

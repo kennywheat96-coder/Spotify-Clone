@@ -8,7 +8,6 @@ export const protectRoute = async (req, res, next) => {
     }
     next();
   } catch (error) {
-    console.error("protectRoute error:", error.message);
     return res.status(401).json({ message: "Unauthorized - you must be logged in" });
   }
 };
@@ -16,6 +15,10 @@ export const protectRoute = async (req, res, next) => {
 export const requireAdmin = async (req, res, next) => {
   try {
     const auth = req.auth();
+    if (!auth || !auth.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const currentUser = await clerkClient.users.getUser(auth.userId);
     const isAdmin = process.env.ADMIN_EMAIL === currentUser.primaryEmailAddress?.emailAddress;
 
@@ -25,7 +28,7 @@ export const requireAdmin = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("requireAdmin error:", error.message);
-    res.status(500).json({ message: error.message || "Internal server error in requireAdmin" });
+    console.error("requireAdmin error:", error.message, error.status);
+    return res.status(500).json({ message: "Admin check failed: " + error.message });
   }
 };

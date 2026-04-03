@@ -2,7 +2,6 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Outlet } from "react-router-dom";
 import LeftSidebar from "./components/LeftSidebar";
 import FriendsActivity from "./components/FriendsActivity";
-import AudioPlayer from "./components/AudioPlayer";
 import { PlaybackControls } from "./components/PlaybackControls";
 import { QueuePanel } from "./components/QueuePanel";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -30,8 +29,6 @@ const MainLayout = () => {
       {!isMobile && (
         <>
           <ResizablePanelGroup direction='horizontal' className='flex-1 flex h-full overflow-hidden p-2'>
-            <AudioPlayer />
-
             <ResizablePanel defaultSize={20} minSize={10} maxSize={30}>
               <LeftSidebar />
             </ResizablePanel>
@@ -57,16 +54,11 @@ const MainLayout = () => {
       {/* Mobile layout */}
       {isMobile && (
         <>
-          <AudioPlayer />
-
-          {/* Main scrollable content — padded so it clears mini player + nav */}
           <div className='flex-1 overflow-y-auto pb-36'>
             <Outlet />
           </div>
 
-          {/* PlaybackControls renders the mobile mini player internally */}
           <PlaybackControls />
-
           <MobileBottomNav />
         </>
       )}

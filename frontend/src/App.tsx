@@ -14,12 +14,16 @@ import SearchPage from "./pages/search/SearchPage";
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
 import { PageTransition } from "./components/PageTransition";
+import AudioPlayer from "./layout/components/AudioPlayer";
 
 function App() {
   const location = useLocation();
 
   return (
     <>
+      {/* AudioPlayer lives here so it never unmounts on route changes */}
+      <AudioPlayer />
+
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route

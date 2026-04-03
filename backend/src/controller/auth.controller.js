@@ -11,15 +11,20 @@ export const authCallback = async (req, res, next) => {
       isNewUser = true;
       user = await User.create({
         clerkId: id,
-        fullName: `${firstName} ${lastName}`,
+        fullName: `${firstName || ""} ${lastName || ""}`.trim(),
         imageUrl: imageUrl || "",
       });
+    } else {
+      // Update existing user info
+      user.fullName = `${firstName || ""} ${lastName || ""}`.trim();
+      user.imageUrl = imageUrl || user.imageUrl;
+      await user.save();
     }
 
-    res.status(200).json({ 
-      success: true, 
-      isNewUser, 
-      mascot: user.mascot 
+    res.status(200).json({
+      success: true,
+      isNewUser,
+      mascot: user.mascot,
     });
   } catch (error) {
     console.log("Error in auth callback", error);

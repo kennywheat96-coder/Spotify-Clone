@@ -4,16 +4,19 @@ export const axiosInstance = axios.create({
   baseURL: "https://spotify-clone-q2iy.onrender.com/api",
 });
 
-// Token is set from outside React components
-let authToken: string | null = null;
+// Holds a reference to Clerk's getToken function
+let getTokenFn: (() => Promise<string | null>) | null = null;
 
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
+export const setGetTokenFn = (fn: () => Promise<string | null>) => {
+  getTokenFn = fn;
 };
 
-axiosInstance.interceptors.request.use((config) => {
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`;
+axiosInstance.interceptors.request.use(async (config) => {
+  if (getTokenFn) {
+    const token = await getTokenFn();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });

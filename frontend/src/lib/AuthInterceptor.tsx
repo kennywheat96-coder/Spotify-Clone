@@ -1,32 +1,19 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect } from "react";
-import { setAuthToken } from "./axios";
+import { setGetTokenFn } from "./axios";
 
 export const AuthInterceptor = () => {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-
-    // Get token immediately and set it
-    const initToken = async () => {
-      const token = await getToken();
-      setAuthToken(token);
-    };
-
-    initToken();
-
-    // Refresh token every 50 seconds (tokens expire in 60s)
-    const interval = setInterval(async () => {
-      const token = await getToken();
-      setAuthToken(token);
-    }, 50000);
+    // Register the getToken function so axios can call it fresh on every request
+    setGetTokenFn(getToken);
 
     return () => {
-      clearInterval(interval);
-      setAuthToken(null);
+      setGetTokenFn(() => Promise.resolve(null));
     };
-  }, [getToken, isLoaded, isSignedIn]);
+  }, [getToken]);
 
   return null;
 };
+

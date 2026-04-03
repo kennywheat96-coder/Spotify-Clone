@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { useRequestStore } from "@/stores/useRequestStore";
 import { useAuth } from "@clerk/clerk-react";
-import { setAuthToken } from "@/lib/axios";
+import { setGetTokenFn } from "@/lib/axios";
 
 const AdminPage = () => {
   const { isAdmin, isLoading, checkAdminStatus } = useAuthStore();
@@ -18,15 +18,11 @@ const AdminPage = () => {
   const { requests, fetchAllRequests } = useRequestStore();
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  // Step 1: get token and set it before any requests
+  // Step 1: register getToken so all axios requests get fresh tokens
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
-    const init = async () => {
-      const token = await getToken();
-      setAuthToken(token);
-      await checkAdminStatus();
-    };
-    init();
+    setGetTokenFn(getToken);
+    checkAdminStatus();
   }, [isLoaded, isSignedIn, getToken, checkAdminStatus]);
 
   // Step 2: once confirmed admin, fetch data

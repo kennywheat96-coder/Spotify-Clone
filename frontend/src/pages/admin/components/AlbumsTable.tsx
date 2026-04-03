@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMusicStore } from "@/stores/useMusicStore";
-import { Calendar, Music, Trash2, Plus } from "lucide-react";
+import { Calendar, Music, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddSongsToAlbumDialog from "./AddSongsToAlbumDialog";
+import EditAlbumDialog from "./EditAlbumDialog";
 
 const AlbumsTable = () => {
   const { albums, deleteAlbum, fetchAlbums } = useMusicStore();
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  const [editingAlbum, setEditingAlbum] = useState<any>(null);
 
   useEffect(() => {
     fetchAlbums();
@@ -48,20 +50,19 @@ const AlbumsTable = () => {
               </TableCell>
               <TableCell className='text-right'>
                 <div className='flex gap-2 justify-end'>
-                  <Button
-                    variant='ghost'
-                    size='sm'
+                  <Button variant='ghost' size='sm'
                     onClick={() => setSelectedAlbum(album._id)}
-                    className='text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10'
-                  >
+                    className='text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10'>
                     <Plus className='h-4 w-4' />
                   </Button>
-                  <Button
-                    variant='ghost'
-                    size='sm'
+                  <Button variant='ghost' size='sm'
+                    onClick={() => setEditingAlbum(album)}
+                    className='text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'>
+                    <Pencil className='h-4 w-4' />
+                  </Button>
+                  <Button variant='ghost' size='sm'
                     onClick={() => deleteAlbum(album._id)}
-                    className='text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                  >
+                    className='text-red-400 hover:text-red-300 hover:bg-red-400/10'>
                     <Trash2 className='h-4 w-4' />
                   </Button>
                 </div>
@@ -72,10 +73,11 @@ const AlbumsTable = () => {
       </Table>
 
       {selectedAlbum && (
-        <AddSongsToAlbumDialog
-          albumId={selectedAlbum}
-          onClose={() => setSelectedAlbum(null)}
-        />
+        <AddSongsToAlbumDialog albumId={selectedAlbum} onClose={() => setSelectedAlbum(null)} />
+      )}
+
+      {editingAlbum && (
+        <EditAlbumDialog album={editingAlbum} onClose={() => setEditingAlbum(null)} />
       )}
     </>
   );

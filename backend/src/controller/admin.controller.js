@@ -130,3 +130,67 @@ export const addSongsToAlbum = async (req, res, next) => {
 export const checkAdmin = async (req, res, next) => {
   res.status(200).json({ admin: true });
 };
+export const updateSong = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, artist, albumId } = req.body;
+
+    let imageUrl;
+    let audioUrl;
+
+    if (req.files?.imageFile) {
+      const imageFile = req.files.imageFile;
+      const uploadedImage = await cloudinary.uploader.upload(imageFile.tempFilePath, {
+        resource_type: "image",
+      });
+      imageUrl = uploadedImage.secure_url;
+    }
+
+    if (req.files?.audioFile) {
+      const audioFile = req.files.audioFile;
+      const uploadedAudio = await cloudinary.uploader.upload(audioFile.tempFilePath, {
+        resource_type: "video",
+      });
+      audioUrl = uploadedAudio.secure_url;
+    }
+
+    const updateData = { title, artist };
+    if (albumId !== undefined) updateData.albumId = albumId === "" ? null : albumId;
+    if (imageUrl) updateData.imageUrl = imageUrl;
+    if (audioUrl) updateData.audioUrl = audioUrl;
+
+    const song = await Song.findByIdAndUpdate(id, updateData, { new: true });
+    if (!song) return res.status(404).json({ message: "Song not found" });
+
+    res.json(song);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAlbum = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, artist, releaseYear } = req.body;
+
+    let imageUrl;
+
+    if (req.files?.imageFile) {
+      const imageFile = req.files.imageFile;
+      const uploadedImage = await cloudinary.uploader.upload(imageFile.tempFilePath, {
+        resource_type: "image",
+      });
+      imageUrl = uploadedImage.secure_url;
+    }
+
+    const updateData = { title, artist, releaseYear: parseInt(releaseYear) };
+    if (imageUrl) updateData.imageUrl = imageUrl;
+
+    const album = await Album.findByIdAndUpdate(id, updateData, { new: true });
+    if (!album) return res.status(404).json({ message: "Album not found" });
+
+    res.json(album);
+  } catch (error) {
+    next(error);
+  }
+};

@@ -17,11 +17,12 @@ const AdminPage = () => {
   const { requests, fetchAllRequests } = useRequestStore();
 
   useEffect(() => {
+    if (!isAdmin) return;
     fetchAlbums();
     fetchSongs();
     fetchStats();
     fetchAllRequests();
-  }, [fetchAlbums, fetchSongs, fetchStats, fetchAllRequests]);
+  }, [isAdmin, fetchAlbums, fetchSongs, fetchStats, fetchAllRequests]);
 
   if (!isAdmin && !isLoading) return <div>Unauthorized</div>;
 

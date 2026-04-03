@@ -19,12 +19,13 @@ const AuthCallbackPage = () => {
       try {
         syncAttempted.current = true;
 
-        const res = await axiosInstance.post("/auth/callback", {
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          imageUrl: user.imageUrl,
-        });
+     const res = await axiosInstance.post("/auth/callback", {
+  id: user.id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  imageUrl: user.imageUrl,
+});
+console.log("Auth callback response:", res.data);
 
         // Show wheel only if brand new user with no mascot
         if (res.data.isNewUser && !res.data.mascot) {

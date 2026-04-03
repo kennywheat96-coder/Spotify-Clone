@@ -161,13 +161,11 @@ const BulkUploadDialog = () => {
       });
     }
 
-    // Auto-fetch cover art for the group if it doesn't have one yet
     setGroups((prev) =>
       prev.map((g) => {
         if (g.id !== targetGroupId) return g;
         const updatedSongs = [...g.songs, ...newSongs];
 
-        // Try to fetch cover art from first song if no cover yet
         if (!g.coverImage && newSongs.length > 0) {
           const firstSong = newSongs[0];
           if (firstSong.artist && firstSong.title) {
@@ -238,23 +236,33 @@ const BulkUploadDialog = () => {
   };
 
   const uploadAll = async () => {
-    const allPending = groups.flatMap((g) =>
+    // Auto-fill empty artist from folder name and empty title from filename
+    const filledGroups = groups.map((g) => ({
+      ...g,
+      songs: g.songs.map((s) => ({
+        ...s,
+        artist: s.artist.trim() || g.name,
+        title: s.title.trim() || s.audioFile.name.replace(/\.[^/.]+$/, ""),
+      })),
+    }));
+
+    const allPending = filledGroups.flatMap((g) =>
       g.songs.filter((s) => s.status === "pending").map((s) => ({ ...s, group: g }))
     );
 
     if (allPending.length === 0) return toast.error("No songs to upload");
 
-    const missingCover = groups.filter(
+    const missingCover = filledGroups.filter(
       (g) => !g.coverImage && g.songs.some((s) => s.status === "pending")
     );
     if (missingCover.length > 0) {
       return toast.error(`${missingCover.map((g) => g.name).join(", ")} missing cover image`);
     }
 
+    setGroups(filledGroups);
     setIsUploading(true);
 
     for (const { group, ...song } of allPending) {
-      // Mark uploading
       setGroups((prev) =>
         prev.map((g) =>
           g.id === group.id

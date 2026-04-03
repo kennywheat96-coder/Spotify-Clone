@@ -9,17 +9,25 @@ import RequestsTabContent from "./components/RequestsTabContent";
 import { useEffect } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { useRequestStore } from "@/stores/useRequestStore";
-import { AuthInterceptor } from "@/lib/AuthInterceptor";
+import { useAuth } from "@clerk/clerk-react";
+import { setAuthToken } from "@/lib/axios";
 
 const AdminPage = () => {
   const { isAdmin, isLoading, checkAdminStatus } = useAuthStore();
   const { fetchAlbums, fetchSongs, fetchStats } = useMusicStore();
   const { requests, fetchAllRequests } = useRequestStore();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  // Step 1: check admin status on mount
+  // Step 1: get token and set it before any requests
   useEffect(() => {
-    checkAdminStatus();
-  }, [checkAdminStatus]);
+    if (!isLoaded || !isSignedIn) return;
+    const init = async () => {
+      const token = await getToken();
+      setAuthToken(token);
+      await checkAdminStatus();
+    };
+    init();
+  }, [isLoaded, isSignedIn, getToken, checkAdminStatus]);
 
   // Step 2: once confirmed admin, fetch data
   useEffect(() => {
@@ -30,7 +38,7 @@ const AdminPage = () => {
     fetchAllRequests();
   }, [isAdmin, fetchAlbums, fetchSongs, fetchStats, fetchAllRequests]);
 
-  if (isLoading) return (
+  if (!isLoaded || isLoading) return (
     <div className='min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-900 to-black flex items-center justify-center'>
       <div className='text-zinc-400'>Loading...</div>
     </div>
@@ -46,7 +54,6 @@ const AdminPage = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-900 to-black text-zinc-100 p-8'>
-      <AuthInterceptor />
       <Header />
       <DashboardStats />
 

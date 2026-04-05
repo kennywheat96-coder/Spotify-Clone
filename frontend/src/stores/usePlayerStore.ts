@@ -26,7 +26,8 @@ interface PlayerStore {
   setProgress: (progress: number) => void;
   toggleQueue: () => void;
   removeFromQueue: (index: number) => void;
-  moveUpInQueue: (index: number) => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
+  moveToFirst: (index: number) => void;
 }
 
 export const usePlayerStore = create<PlayerStore>()(
@@ -161,14 +162,36 @@ export const usePlayerStore = create<PlayerStore>()(
         set({ queue: newQueue, currentIndex: newIndex });
       },
 
-      moveUpInQueue: (index: number) => {
+      reorderQueue: (fromIndex: number, toIndex: number) => {
         const { queue, currentIndex } = get();
-        if (index <= currentIndex + 1) return;
+        if (fromIndex === toIndex) return;
         const newQueue = [...queue];
-        const temp = newQueue[index];
-        newQueue[index] = newQueue[index - 1];
-        newQueue[index - 1] = temp;
+        const [moved] = newQueue.splice(fromIndex, 1);
+        newQueue.splice(toIndex, 0, moved);
+
+        // Keep currentIndex pointing to the same song
+        let newCurrentIndex = currentIndex;
+        if (fromIndex === currentIndex) {
+          newCurrentIndex = toIndex;
+        } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
+          newCurrentIndex = currentIndex - 1;
+        } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
+          newCurrentIndex = currentIndex + 1;
+        }
+
+        set({ queue: newQueue, currentIndex: newCurrentIndex });
+      },
+
+      moveToFirst: (index: number) => {
+        const { queue, currentIndex } = get();
+        if (index <= currentIndex + 1) return; // already next
+        const newQueue = [...queue];
+        const [moved] = newQueue.splice(index, 1);
+        newQueue.splice(currentIndex + 1, 0, moved);
         set({ queue: newQueue });
+        import("react-hot-toast").then(({ default: toast }) =>
+          toast.success("Playing next")
+        );
       },
 
       toggleShuffle: () => set((s) => ({ isShuffle: !s.isShuffle })),
@@ -181,15 +204,15 @@ export const usePlayerStore = create<PlayerStore>()(
       toggleQueue: () => set((s) => ({ isQueueVisible: !s.isQueueVisible })),
     }),
     {
-  name: "player-storage",
-  partialize: (state) => ({
-    currentSong: state.currentSong,
-    queue: state.queue,
-    currentIndex: state.currentIndex,
-    volume: state.volume,
-    isShuffle: state.isShuffle,
-    repeatMode: state.repeatMode,
-  }),
-}
+      name: "player-storage",
+      partialize: (state) => ({
+        currentSong: state.currentSong,
+        queue: state.queue,
+        currentIndex: state.currentIndex,
+        volume: state.volume,
+        isShuffle: state.isShuffle,
+        repeatMode: state.repeatMode,
+      }),
+    }
   )
 );

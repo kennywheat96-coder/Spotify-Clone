@@ -4,53 +4,50 @@ import { useEffect, useRef } from "react";
 
 const AudioPlayer = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const prevSongRef = useRef<string | null>(null);
+  const prevSongIdRef = useRef<string | null>(null);
 
   const { currentSong, isPlaying, playNext, playPrevious } = usePlayerStore();
   const { addRecentlyPlayed } = useRecentlyPlayedStore();
 
-  // Handle play/pause
-  useEffect(() => {
-    if (isPlaying) {
-      audioRef.current?.play().catch((err) => {
-        console.log("Play error:", err);
-      });
-    } else {
-      audioRef.current?.pause();
-    }
-  }, [isPlaying]);
-
   // Handle song ends
   useEffect(() => {
     const audio = audioRef.current;
+    if (!audio) return;
     const handleEnded = () => playNext();
-    audio?.addEventListener("ended", handleEnded);
-    return () => audio?.removeEventListener("ended", handleEnded);
+    audio.addEventListener("ended", handleEnded);
+    return () => audio.removeEventListener("ended", handleEnded);
   }, [playNext]);
 
-  // Handle song changes
+  // Main playback effect — handles both song changes and play/pause
   useEffect(() => {
-    if (!audioRef.current || !currentSong) return;
-
     const audio = audioRef.current;
-    const isSongChange = prevSongRef.current !== currentSong.audioUrl;
+    if (!audio || !currentSong) return;
+
+    const isSongChange = prevSongIdRef.current !== currentSong._id;
 
     if (isSongChange) {
+      // New song — load and play
+      prevSongIdRef.current = currentSong._id;
       audio.src = currentSong.audioUrl;
       audio.currentTime = 0;
-      prevSongRef.current = currentSong.audioUrl;
       addRecentlyPlayed(currentSong._id);
-    }
 
-    // Always try to play if isPlaying is true
-    if (isPlaying) {
-      audio.play().catch((err) => {
-        console.log("Play error:", err);
-      });
+      if (isPlaying) {
+        const playPromise = audio.play();
+        if (playPromise) playPromise.catch((err) => console.log("Play error:", err));
+      }
+    } else {
+      // Same song — just play or pause
+      if (isPlaying) {
+        const playPromise = audio.play();
+        if (playPromise) playPromise.catch((err) => console.log("Play error:", err));
+      } else {
+        audio.pause();
+      }
     }
   }, [currentSong, isPlaying, addRecentlyPlayed]);
 
-  // Media Session API — lock screen controls + background playback
+  // Media Session API
   useEffect(() => {
     if (!currentSong || !("mediaSession" in navigator)) return;
 
@@ -75,7 +72,6 @@ const AudioPlayer = () => {
 
     navigator.mediaSession.setActionHandler("nexttrack", () => playNext());
     navigator.mediaSession.setActionHandler("previoustrack", () => playPrevious());
-
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }, [currentSong, isPlaying, playNext, playPrevious]);
 

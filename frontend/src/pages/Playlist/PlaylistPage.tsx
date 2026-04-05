@@ -81,8 +81,11 @@ const PlaylistPage = () => {
             )}
           </Button>
 
-          {isCurrentPlaylistPlaying && <AudioVisualizer className='flex-1 h-12' />}
-
+{isCurrentPlaylistPlaying && (
+  <div className='hidden sm:block flex-1'>
+    <AudioVisualizer className='w-full h-12' />
+  </div>
+)}
           {isOwner && (
             <Button
               onClick={handleDelete}

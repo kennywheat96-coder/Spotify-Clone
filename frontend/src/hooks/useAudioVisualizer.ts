@@ -12,17 +12,20 @@ export const useAudioVisualizer = (isPlaying: boolean) => {
     if (!audio) return;
 
     if (!contextRef.current) {
-      const context = new AudioContext();
-      const analyser = context.createAnalyser();
-      analyser.fftSize = 256;
-
-      const source = context.createMediaElementSource(audio);
-      source.connect(analyser);
-      analyser.connect(context.destination);
-
-      contextRef.current = context;
-      analyserRef.current = analyser;
-      sourceRef.current = source;
+      try {
+        const context = new AudioContext();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+        const source = context.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(context.destination);
+        contextRef.current = context;
+        analyserRef.current = analyser;
+        sourceRef.current = source;
+      } catch (err) {
+        console.log("AudioVisualizer error:", err);
+        return;
+      }
     }
 
     return () => {
@@ -44,7 +47,6 @@ export const useAudioVisualizer = (isPlaying: boolean) => {
     const draw = () => {
       animationRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const barWidth = (canvas.width / bufferLength) * 2.5;

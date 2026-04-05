@@ -14,7 +14,7 @@ export const getFeaturedSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
       { $sample: { size: 6 } },
-      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1 } }
+      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1, albumId: 1, duration: 1 } }
     ]);
     res.json(songs);
   } catch (error) {
@@ -26,7 +26,7 @@ export const getMadeForYouSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
       { $sample: { size: 6 } },
-      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1 } }
+      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1, albumId: 1, duration: 1 } }
     ]);
     res.json(songs);
   } catch (error) {
@@ -38,7 +38,7 @@ export const getTopChartsSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
       { $sample: { size: 6 } },
-      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1 } }
+      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1, albumId: 1, duration: 1 } }
     ]);
     res.json(songs);
   } catch (error) {
@@ -50,7 +50,7 @@ export const getTrendingSongs = async (req, res, next) => {
   try {
     const songs = await Song.aggregate([
       { $sample: { size: 6 } },
-      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1 } }
+      { $project: { _id: 1, title: 1, artist: 1, imageUrl: 1, audioUrl: 1, albumId: 1, duration: 1 } }
     ]);
     res.json(songs);
   } catch (error) {
@@ -68,14 +68,12 @@ export const searchSongs = async (req, res, next) => {
 
     const regex = { $regex: query, $options: "i" };
 
-    // Songs matching title or artist
     const songs = await Song.find({
       $or: [{ title: regex }, { artist: regex }],
     })
       .limit(10)
-      .select("_id title artist imageUrl audioUrl");
+      .select("_id title artist imageUrl audioUrl albumId duration");
 
-    // Artists — group songs by artist name matching query
     const artistDocs = await Song.aggregate([
       { $match: { artist: { $regex: query, $options: "i" } } },
       { $group: { _id: "$artist", imageUrl: { $first: "$imageUrl" }, songCount: { $sum: 1 } } },
@@ -83,7 +81,6 @@ export const searchSongs = async (req, res, next) => {
       { $project: { _id: 0, name: "$_id", imageUrl: 1, songCount: 1 } },
     ]);
 
-    // Albums matching title or artist
     const albums = await Album.find({
       $or: [{ title: regex }, { artist: regex }],
     })

@@ -88,9 +88,10 @@ export const usePlayerStore = create<PlayerStore>()(
         if (socket.auth) {
           socket.emit("update_activity", {
             userId: socket.auth.userId,
-            activity: willStartPlaying && currentSong
-              ? `Playing ${currentSong.title} by ${currentSong.artist}`
-              : "Idle",
+            activity:
+              willStartPlaying && currentSong
+                ? `Playing ${currentSong.title} by ${currentSong.artist}`
+                : "Idle",
           });
         }
         set({ isPlaying: willStartPlaying });
@@ -127,7 +128,10 @@ export const usePlayerStore = create<PlayerStore>()(
           set({ isPlaying: false });
           const socket = useChatStore.getState().socket;
           if (socket.auth) {
-            socket.emit("update_activity", { userId: socket.auth.userId, activity: "Idle" });
+            socket.emit("update_activity", {
+              userId: socket.auth.userId,
+              activity: "Idle",
+            });
           }
         }
       },
@@ -149,7 +153,10 @@ export const usePlayerStore = create<PlayerStore>()(
           set({ isPlaying: false });
           const socket = useChatStore.getState().socket;
           if (socket.auth) {
-            socket.emit("update_activity", { userId: socket.auth.userId, activity: "Idle" });
+            socket.emit("update_activity", {
+              userId: socket.auth.userId,
+              activity: "Idle",
+            });
           }
         }
       },
@@ -169,7 +176,6 @@ export const usePlayerStore = create<PlayerStore>()(
         const [moved] = newQueue.splice(fromIndex, 1);
         newQueue.splice(toIndex, 0, moved);
 
-        // Keep currentIndex pointing to the same song
         let newCurrentIndex = currentIndex;
         if (fromIndex === currentIndex) {
           newCurrentIndex = toIndex;
@@ -184,7 +190,7 @@ export const usePlayerStore = create<PlayerStore>()(
 
       moveToFirst: (index: number) => {
         const { queue, currentIndex } = get();
-        if (index <= currentIndex + 1) return; // already next
+        if (index <= currentIndex + 1) return;
         const newQueue = [...queue];
         const [moved] = newQueue.splice(index, 1);
         newQueue.splice(currentIndex + 1, 0, moved);
@@ -197,7 +203,8 @@ export const usePlayerStore = create<PlayerStore>()(
       toggleShuffle: () => set((s) => ({ isShuffle: !s.isShuffle })),
       cycleRepeat: () =>
         set((s) => ({
-          repeatMode: s.repeatMode === "off" ? "all" : s.repeatMode === "all" ? "one" : "off",
+          repeatMode:
+            s.repeatMode === "off" ? "all" : s.repeatMode === "all" ? "one" : "off",
         })),
       setVolume: (volume) => set({ volume }),
       setProgress: (progress) => set({ progress }),

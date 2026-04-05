@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import type { Song } from "@/types";
 
 interface SongMenuProps {
-  song: Song;
+  song: Song & { albumId?: string };
 }
 
 export const SongMenu = ({ song }: SongMenuProps) => {
@@ -15,6 +15,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // Close on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -69,6 +70,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
         >
           {!showPlaylists ? (
             <>
+              {/* Add to Queue */}
               <button
                 onClick={handleAddToQueue}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -77,6 +79,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Add to Queue
               </button>
 
+              {/* Play Next */}
               <button
                 onClick={handlePlayNext}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -85,6 +88,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Play Next
               </button>
 
+              {/* Add to Playlist */}
               <button
                 onClick={() => setShowPlaylists(true)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -93,6 +97,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Add to Playlist
               </button>
 
+              {/* Go to Album */}
               {song.albumId && (
                 <button
                   onClick={handleGoToAlbum}

@@ -40,11 +40,13 @@ const AudioPlayer = () => {
       audio.currentTime = 0;
       prevSongRef.current = currentSong.audioUrl;
       addRecentlyPlayed(currentSong._id);
-      if (isPlaying) {
-        audio.play().catch((err) => {
-          console.log("Play error:", err);
-        });
-      }
+    }
+
+    // Always try to play if isPlaying is true
+    if (isPlaying) {
+      audio.play().catch((err) => {
+        console.log("Play error:", err);
+      });
     }
   }, [currentSong, isPlaying, addRecentlyPlayed]);
 
@@ -74,7 +76,6 @@ const AudioPlayer = () => {
     navigator.mediaSession.setActionHandler("nexttrack", () => playNext());
     navigator.mediaSession.setActionHandler("previoustrack", () => playPrevious());
 
-    // Update playback state so OS knows it's playing
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }, [currentSong, isPlaying, playNext, playPrevious]);
 

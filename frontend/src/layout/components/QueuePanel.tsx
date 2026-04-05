@@ -1,6 +1,6 @@
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X } from "lucide-react";
+import { X, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const QueuePanel = () => {
@@ -11,6 +11,8 @@ export const QueuePanel = () => {
     isQueueVisible,
     toggleQueue,
     setCurrentSong,
+    removeFromQueue,
+    moveUpInQueue,
   } = usePlayerStore();
 
   if (!isQueueVisible) return null;
@@ -36,11 +38,7 @@ export const QueuePanel = () => {
             <div>
               <p className="text-xs text-zinc-400 uppercase tracking-wider mb-3">Now Playing</p>
               <div className="flex items-center gap-3 bg-zinc-800 rounded-md p-2">
-                <img
-                  src={currentSong.imageUrl}
-                  alt={currentSong.title}
-                  className="w-10 h-10 rounded object-cover"
-                />
+                <img src={currentSong.imageUrl} alt={currentSong.title} className="w-10 h-10 rounded object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-green-400 truncate">{currentSong.title}</p>
                   <p className="text-xs text-zinc-400 truncate">{currentSong.artist}</p>
@@ -56,25 +54,49 @@ export const QueuePanel = () => {
                 Next Up ({upNext.length})
               </p>
               <div className="space-y-1">
-                {upNext.map((song, i) => (
-                  <div
-                    key={`${song._id}-${i}`}
-                    onClick={() => setCurrentSong(song)}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 cursor-pointer group"
-                  >
-                    <img
-                      src={song.imageUrl}
-                      alt={song.title}
-                      className="w-9 h-9 rounded object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate group-hover:text-green-400 transition-colors">
-                        {song.title}
-                      </p>
-                      <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
+                {upNext.map((song, i) => {
+                  const absoluteIndex = currentIndex + 1 + i;
+                  return (
+                    <div
+                      key={`${song._id}-${i}`}
+                      className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 group"
+                    >
+                      <img
+                        src={song.imageUrl}
+                        alt={song.title}
+                        className="w-9 h-9 rounded object-cover cursor-pointer flex-shrink-0"
+                        onClick={() => setCurrentSong(song)}
+                      />
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setCurrentSong(song)}
+                      >
+                        <p className="text-sm text-white truncate group-hover:text-green-400 transition-colors">
+                          {song.title}
+                        </p>
+                        <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        {i > 0 && (
+                          <button
+                            onClick={() => moveUpInQueue(absoluteIndex)}
+                            className="p-1 text-zinc-400 hover:text-white transition-colors"
+                            title="Move up"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeFromQueue(absoluteIndex)}
+                          className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                          title="Remove"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -92,11 +114,7 @@ export const QueuePanel = () => {
                     onClick={() => setCurrentSong(song)}
                     className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 cursor-pointer group opacity-50 hover:opacity-100 transition-opacity"
                   >
-                    <img
-                      src={song.imageUrl}
-                      alt={song.title}
-                      className="w-9 h-9 rounded object-cover"
-                    />
+                    <img src={song.imageUrl} alt={song.title} className="w-9 h-9 rounded object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{song.title}</p>
                       <p className="text-xs text-zinc-400 truncate">{song.artist}</p>

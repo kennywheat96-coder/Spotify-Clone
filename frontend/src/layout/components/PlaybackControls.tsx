@@ -2,10 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { LikeButton } from "@/components/LikeButton";
+import { AddToPlaylistMenu } from "@/components/AddToPlaylistMenu";
 import {
   ChevronDown, Laptop2, ListMusic, Mic2, Pause, Play,
   Repeat, Repeat1, Shuffle, SkipBack, SkipForward,
-  Volume1, Volume2, VolumeX
+  Volume1, Volume2, VolumeX, ListPlus, X, ArrowUp
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -21,15 +22,18 @@ export const PlaybackControls = () => {
     isShuffle, toggleShuffle,
     repeatMode, cycleRepeat,
     isQueueVisible, toggleQueue,
+    queue, currentIndex,
+    setCurrentSong, removeFromQueue, moveUpInQueue,
   } = usePlayerStore();
 
   const [volume, setVolume] = useState(75);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
+  const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sync audio element
   useEffect(() => {
     audioRef.current = document.querySelector("audio");
     const audio = audioRef.current;
@@ -50,7 +54,6 @@ export const PlaybackControls = () => {
     };
   }, [currentSong]);
 
-  
   const handleSeek = (value: number[]) => {
     if (audioRef.current) audioRef.current.currentTime = value[0];
   };
@@ -69,6 +72,7 @@ export const PlaybackControls = () => {
   const VolumeIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2;
   const RepeatIcon = repeatMode === "one" ? Repeat1 : Repeat;
   const progress = duration ? (currentTime / duration) * 100 : 0;
+  const upNext = queue.slice(currentIndex + 1);
 
   return (
     <>
@@ -154,20 +158,14 @@ export const PlaybackControls = () => {
             className='relative overflow-hidden rounded-xl bg-zinc-900 border border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.15)] cursor-pointer'
             onClick={() => setIsExpanded(true)}
           >
-            {/* Progress bar */}
             <div className='absolute top-0 left-0 right-0 h-0.5 bg-zinc-700'>
               <div className='h-full bg-green-500 transition-all duration-300' style={{ width: `${progress}%` }} />
             </div>
-
-            {/* Blurred bg */}
             <div className='absolute inset-0 opacity-10'>
               <img src={currentSong.imageUrl} alt='' className='w-full h-full object-cover blur-xl scale-110' />
             </div>
-
             <div className='relative flex items-center gap-3 px-3 py-2.5'>
-              <img
-                src={currentSong.imageUrl}
-                alt={currentSong.title}
+              <img src={currentSong.imageUrl} alt={currentSong.title}
                 className={`w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-lg ${isPlaying ? "ring-2 ring-green-500/50" : ""}`}
               />
               <div className='flex-1 min-w-0'>
@@ -179,10 +177,8 @@ export const PlaybackControls = () => {
                 <button onClick={playPrevious} className='p-2 text-zinc-400 hover:text-white transition-colors'>
                   <SkipBack className='h-4 w-4' />
                 </button>
-                <button
-                  onClick={togglePlay}
-                  className='w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform'
-                >
+                <button onClick={togglePlay}
+                  className='w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-lg active:scale-95 transition-transform'>
                   {isPlaying ? <Pause className='h-4 w-4 text-black' /> : <Play className='h-4 w-4 text-black ml-0.5' />}
                 </button>
                 <button onClick={playNext} className='p-2 text-zinc-400 hover:text-white transition-colors'>
@@ -195,113 +191,169 @@ export const PlaybackControls = () => {
       </div>
 
       {/* ─── MOBILE EXPANDED PLAYER ─── */}
-      <div className={`sm:hidden fixed inset-0 z-50 flex flex-col transition-all duration-500 ease-in-out ${
-        isExpanded && currentSong
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-full pointer-events-none"
+      <div className={`sm:hidden fixed inset-0 z-[100] flex flex-col transition-all duration-500 ease-in-out ${
+        isExpanded && currentSong ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none"
       }`}>
         {currentSong && (
           <>
-            {/* Blurred background */}
             <div className='absolute inset-0'>
               <img src={currentSong.imageUrl} alt='' className='w-full h-full object-cover blur-3xl scale-110 opacity-40' />
               <div className='absolute inset-0 bg-zinc-950/70' />
             </div>
 
             <div className='relative flex flex-col h-full px-6 pt-12 pb-8'>
+
               {/* Header */}
-              <div className='flex items-center justify-between mb-8'>
-                <button onClick={() => setIsExpanded(false)} className='text-white p-2'>
+              <div className='flex items-center justify-between mb-6'>
+                <button onClick={() => { setIsExpanded(false); setShowQueue(false); setShowAddToPlaylist(false); }}
+                  className='text-white p-2'>
                   <ChevronDown className='h-6 w-6' />
                 </button>
-                <p className='text-sm font-semibold text-white'>Now Playing</p>
-                <div className='w-10' />
-              </div>
-
-              {/* Album art */}
-              <div className='flex justify-center mb-8'>
-                <img
-                  src={currentSong.imageUrl}
-                  alt={currentSong.title}
-                  className={`w-64 h-64 rounded-2xl object-cover shadow-2xl transition-all duration-300 ${
-                    isPlaying ? "scale-100 shadow-[0_0_60px_rgba(34,197,94,0.3)]" : "scale-95 opacity-80"
-                  }`}
-                />
-              </div>
-
-              {/* Song info + like */}
-              <div className='flex items-center justify-between mb-6'>
-                <div className='flex-1 min-w-0 mr-4'>
-                  <p className='text-xl font-bold text-white truncate'>{currentSong.title}</p>
-                  <p className='text-zinc-400 truncate'>{currentSong.artist}</p>
-                </div>
-                <LikeButton songId={currentSong._id} size='sm' />
-              </div>
-
-              {/* Progress */}
-              <div className='mb-4'>
-                <Slider
-                  value={[currentTime]}
-                  max={duration || 100}
-                  step={1}
-                  className='w-full hover:cursor-grab active:cursor-grabbing'
-                  onValueChange={handleSeek}
-                />
-                <div className='flex justify-between mt-1'>
-                  <span className='text-xs text-zinc-400'>{formatTime(currentTime)}</span>
-                  <span className='text-xs text-zinc-400'>{formatTime(duration)}</span>
+                <p className='text-sm font-semibold text-white'>
+                  {showQueue ? "Queue" : showAddToPlaylist ? "Add to Playlist" : "Now Playing"}
+                </p>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={() => { setShowAddToPlaylist(!showAddToPlaylist); setShowQueue(false); }}
+                    className={`p-2 transition-colors ${showAddToPlaylist ? "text-green-400" : "text-zinc-400"}`}
+                  >
+                    <ListPlus className='h-5 w-5' />
+                  </button>
+                  <button
+                    onClick={() => { setShowQueue(!showQueue); setShowAddToPlaylist(false); }}
+                    className={`p-2 transition-colors ${showQueue ? "text-green-400" : "text-zinc-400"}`}
+                  >
+                    <ListMusic className='h-5 w-5' />
+                  </button>
                 </div>
               </div>
 
-              {/* Controls */}
-              <div className='flex items-center justify-between mb-8'>
-                <button
-                  onClick={toggleShuffle}
-                  className={`p-2 transition-colors ${isShuffle ? "text-green-500" : "text-zinc-400"}`}
-                >
-                  <Shuffle className='h-5 w-5' />
-                </button>
+              {/* Add to Playlist view */}
+              {showAddToPlaylist && (
+                <div className='flex-1 overflow-y-auto'>
+                  <AddToPlaylistMenu songId={currentSong._id} />
+                </div>
+              )}
 
-                <button onClick={playPrevious} className='p-2 text-white'>
-                  <SkipBack className='h-7 w-7' />
-                </button>
+              {/* Queue view */}
+              {showQueue && !showAddToPlaylist && (
+                <div className='flex-1 overflow-y-auto space-y-2'>
+                  <p className='text-xs text-zinc-400 uppercase tracking-wider mb-3'>
+                    Now Playing
+                  </p>
+                  <div className='flex items-center gap-3 bg-zinc-800/50 rounded-lg p-3 mb-4'>
+                    <img src={currentSong.imageUrl} alt={currentSong.title} className='w-10 h-10 rounded object-cover' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-green-400 truncate'>{currentSong.title}</p>
+                      <p className='text-xs text-zinc-400 truncate'>{currentSong.artist}</p>
+                    </div>
+                  </div>
 
-                <button
-                  onClick={togglePlay}
-                  className='w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-xl active:scale-95 transition-transform'
-                >
-                  {isPlaying
-                    ? <Pause className='h-7 w-7 text-black' />
-                    : <Play className='h-7 w-7 text-black ml-1' />
-                  }
-                </button>
+                  {upNext.length > 0 && (
+                    <>
+                      <p className='text-xs text-zinc-400 uppercase tracking-wider mb-2'>
+                        Next Up ({upNext.length})
+                      </p>
+                      {upNext.map((song, i) => {
+                        const absoluteIndex = currentIndex + 1 + i;
+                        return (
+                          <div key={`${song._id}-${i}`}
+                            className='flex items-center gap-3 p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/60'>
+                            <img src={song.imageUrl} alt={song.title}
+                              className='w-10 h-10 rounded object-cover cursor-pointer flex-shrink-0'
+                              onClick={() => setCurrentSong(song)} />
+                            <div className='flex-1 min-w-0 cursor-pointer' onClick={() => setCurrentSong(song)}>
+                              <p className='text-sm text-white truncate'>{song.title}</p>
+                              <p className='text-xs text-zinc-400 truncate'>{song.artist}</p>
+                            </div>
+                            <div className='flex items-center gap-2 flex-shrink-0'>
+                              {i > 0 && (
+                                <button onClick={() => moveUpInQueue(absoluteIndex)}
+                                  className='p-1.5 text-zinc-400 hover:text-white transition-colors'>
+                                  <ArrowUp className='h-4 w-4' />
+                                </button>
+                              )}
+                              <button onClick={() => removeFromQueue(absoluteIndex)}
+                                className='p-1.5 text-zinc-400 hover:text-red-400 transition-colors'>
+                                <X className='h-4 w-4' />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
 
-                <button onClick={playNext} className='p-2 text-white'>
-                  <SkipForward className='h-7 w-7' />
-                </button>
+                  {upNext.length === 0 && (
+                    <p className='text-zinc-500 text-sm text-center mt-8'>No more songs in queue</p>
+                  )}
+                </div>
+              )}
 
-                <button
-                  onClick={cycleRepeat}
-                  className={`p-2 transition-colors ${repeatMode !== "off" ? "text-green-500" : "text-zinc-400"}`}
-                >
-                  <RepeatIcon className='h-5 w-5' />
-                </button>
-              </div>
+              {/* Normal player view */}
+              {!showQueue && !showAddToPlaylist && (
+                <>
+                  {/* Album art */}
+                  <div className='flex justify-center mb-8'>
+                    <img src={currentSong.imageUrl} alt={currentSong.title}
+                      className={`w-64 h-64 rounded-2xl object-cover shadow-2xl transition-all duration-300 ${
+                        isPlaying ? "scale-100 shadow-[0_0_60px_rgba(34,197,94,0.3)]" : "scale-95 opacity-80"
+                      }`}
+                    />
+                  </div>
 
-              {/* Volume */}
-              <div className='flex items-center gap-3'>
-                <button onClick={toggleMute} className='text-zinc-400'>
-                  <VolumeIcon className='h-4 w-4' />
-                </button>
-                <Slider
-                  value={[volume]}
-                  max={100}
-                  step={1}
-                  className='flex-1 hover:cursor-grab active:cursor-grabbing'
-                  onValueChange={handleVolumeChange}
-                />
-                <Volume2 className='h-4 w-4 text-zinc-400' />
-              </div>
+                  {/* Song info + like */}
+                  <div className='flex items-center justify-between mb-6'>
+                    <div className='flex-1 min-w-0 mr-4'>
+                      <p className='text-xl font-bold text-white truncate'>{currentSong.title}</p>
+                      <p className='text-zinc-400 truncate'>{currentSong.artist}</p>
+                    </div>
+                    <LikeButton songId={currentSong._id} size='sm' />
+                  </div>
+
+                  {/* Progress */}
+                  <div className='mb-4'>
+                    <Slider value={[currentTime]} max={duration || 100} step={1}
+                      className='w-full hover:cursor-grab active:cursor-grabbing' onValueChange={handleSeek} />
+                    <div className='flex justify-between mt-1'>
+                      <span className='text-xs text-zinc-400'>{formatTime(currentTime)}</span>
+                      <span className='text-xs text-zinc-400'>{formatTime(duration)}</span>
+                    </div>
+                  </div>
+
+                  {/* Controls */}
+                  <div className='flex items-center justify-between mb-8'>
+                    <button onClick={toggleShuffle}
+                      className={`p-2 transition-colors ${isShuffle ? "text-green-500" : "text-zinc-400"}`}>
+                      <Shuffle className='h-5 w-5' />
+                    </button>
+                    <button onClick={playPrevious} className='p-2 text-white'>
+                      <SkipBack className='h-7 w-7' />
+                    </button>
+                    <button onClick={togglePlay}
+                      className='w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-xl active:scale-95 transition-transform'>
+                      {isPlaying ? <Pause className='h-7 w-7 text-black' /> : <Play className='h-7 w-7 text-black ml-1' />}
+                    </button>
+                    <button onClick={playNext} className='p-2 text-white'>
+                      <SkipForward className='h-7 w-7' />
+                    </button>
+                    <button onClick={cycleRepeat}
+                      className={`p-2 transition-colors ${repeatMode !== "off" ? "text-green-500" : "text-zinc-400"}`}>
+                      <RepeatIcon className='h-5 w-5' />
+                    </button>
+                  </div>
+
+                  {/* Volume */}
+                  <div className='flex items-center gap-3'>
+                    <button onClick={toggleMute} className='text-zinc-400'>
+                      <VolumeIcon className='h-4 w-4' />
+                    </button>
+                    <Slider value={[volume]} max={100} step={1}
+                      className='flex-1 hover:cursor-grab active:cursor-grabbing' onValueChange={handleVolumeChange} />
+                    <Volume2 className='h-4 w-4 text-zinc-400' />
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

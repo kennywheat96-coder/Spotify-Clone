@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { MoreHorizontal, ListPlus, ListEnd, SkipForward, Disc } from "lucide-react";
 import { AddToPlaylistMenu } from "./AddToPlaylistMenu";
 import { usePlayerStore } from "@/stores/usePlayerStore";
@@ -6,25 +7,66 @@ import { useNavigate } from "react-router-dom";
 import type { Song } from "@/types";
 
 interface SongMenuProps {
-song: Song;
+  song: Song;
 }
 
 export const SongMenu = ({ song }: SongMenuProps) => {
   const [open, setOpen] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Calculate menu position when opening
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!buttonRef.current) return;
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuHeight = 200;
+    const menuWidth = 200;
+
+    // Position above or below depending on space
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow > menuHeight
+      ? rect.bottom + 4
+      : rect.top - menuHeight - 4;
+
+    // Position left or right depending on space
+    const spaceRight = window.innerWidth - rect.left;
+    const left = spaceRight > menuWidth
+      ? rect.left
+      : rect.right - menuWidth;
+
+    setMenuPos({ top, left });
+    setOpen(!open);
+    setShowPlaylists(false);
+  };
 
   // Close on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
         setShowPlaylists(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Close on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setOpen(false);
+      setShowPlaylists(false);
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
   const handleAddToQueue = () => {
@@ -51,26 +93,24 @@ export const SongMenu = ({ song }: SongMenuProps) => {
   };
 
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(!open);
-          setShowPlaylists(false);
-        }}
+        ref={buttonRef}
+        onClick={handleOpen}
         className="p-1.5 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-zinc-700/50"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute right-0 bottom-full mb-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-[200] overflow-hidden min-w-[200px]"
+          ref={menuRef}
+          className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-[9999] overflow-hidden min-w-[200px]"
+          style={{ top: menuPos.top, left: menuPos.left }}
           onClick={(e) => e.stopPropagation()}
         >
           {!showPlaylists ? (
             <>
-              {/* Add to Queue */}
               <button
                 onClick={handleAddToQueue}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -79,7 +119,6 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Add to Queue
               </button>
 
-              {/* Play Next */}
               <button
                 onClick={handlePlayNext}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -88,7 +127,6 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Play Next
               </button>
 
-              {/* Add to Playlist */}
               <button
                 onClick={() => setShowPlaylists(true)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
@@ -97,7 +135,6 @@ export const SongMenu = ({ song }: SongMenuProps) => {
                 Add to Playlist
               </button>
 
-              {/* Go to Album */}
               {song.albumId && (
                 <button
                   onClick={handleGoToAlbum}
@@ -119,8 +156,9 @@ export const SongMenu = ({ song }: SongMenuProps) => {
               <AddToPlaylistMenu songId={song._id} />
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };

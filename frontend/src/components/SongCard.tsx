@@ -1,121 +1,93 @@
-import { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, ListPlus, ListEnd, SkipForward, Disc } from "lucide-react";
-import { AddToPlaylistMenu } from "./AddToPlaylistMenu";
+import { motion } from "framer-motion";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { useNavigate } from "react-router-dom";
+import { SongContextMenu } from "./SongContextMenu";
+import { SongMenu } from "./SongMenu";
+import { Play, Pause } from "lucide-react";
 import type { Song } from "@/types";
 
-interface SongMenuProps {
+interface SongCardProps {
   song: Song;
+  index: number;
+  songs: Song[];
 }
 
-export const SongMenu = ({ song }: SongMenuProps) => {
-  const [open, setOpen] = useState(false);
-  const [showPlaylists, setShowPlaylists] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+export const SongCard = ({ song, index, songs }: SongCardProps) => {
+  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
+  const isCurrentSong = currentSong?._id === song._id;
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setShowPlaylists(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const handleAddToQueue = () => {
-    const { queue } = usePlayerStore.getState();
-    usePlayerStore.setState({ queue: [...queue, song] });
-    setOpen(false);
-    import("react-hot-toast").then(({ default: toast }) => toast.success("Added to queue"));
-  };
-
-  const handlePlayNext = () => {
-    const { queue, currentIndex } = usePlayerStore.getState();
-    const newQueue = [...queue];
-    newQueue.splice(currentIndex + 1, 0, song);
-    usePlayerStore.setState({ queue: newQueue });
-    setOpen(false);
-    import("react-hot-toast").then(({ default: toast }) => toast.success("Playing next"));
-  };
-
-  const handleGoToAlbum = () => {
-    if (song.albumId) {
-      navigate(`/albums/${song.albumId}`);
-      setOpen(false);
+  const handleClick = () => {
+    if (isCurrentSong) {
+      togglePlay();
+    } else {
+      playAlbum(songs, index);
     }
   };
 
   return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(!open);
-          setShowPlaylists(false);
-        }}
-        className="p-1.5 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-zinc-700/50"
+    <SongContextMenu songId={song._id}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+        className='bg-zinc-800/50 rounded-md p-3 hover:bg-zinc-700/50 transition-all cursor-pointer group relative'
       >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 bottom-full mb-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-[200] overflow-hidden min-w-[200px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {!showPlaylists ? (
-            <>
-              <button
-                onClick={handleAddToQueue}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
-              >
-                <ListEnd className="h-4 w-4 text-zinc-400" />
-                Add to Queue
-              </button>
-
-              <button
-                onClick={handlePlayNext}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
-              >
-                <SkipForward className="h-4 w-4 text-zinc-400" />
-                Play Next
-              </button>
-
-              <button
-                onClick={() => setShowPlaylists(true)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
-              >
-                <ListPlus className="h-4 w-4 text-zinc-400" />
-                Add to Playlist
-              </button>
-
-              {song.albumId && (
-                <button
-                  onClick={handleGoToAlbum}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors border-t border-zinc-700"
-                >
-                  <Disc className="h-4 w-4 text-zinc-400" />
-                  Go to Album
-                </button>
+        {/* Album art */}
+        <div className='relative mb-3' onClick={handleClick}>
+          <img
+            src={song.imageUrl}
+            alt={song.title}
+            className='w-full aspect-square object-cover rounded-md shadow-lg'
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            className='absolute inset-0 bg-black/40 rounded-md flex items-center justify-center'
+          >
+            <motion.div
+              whileTap={{ scale: 0.9 }}
+              className='w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg'
+            >
+              {isCurrentSong && isPlaying ? (
+                <Pause className='h-5 w-5 text-black' />
+              ) : (
+                <Play className='h-5 w-5 text-black' />
               )}
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setShowPlaylists(false)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-zinc-400 hover:text-white transition-colors border-b border-zinc-700"
-              >
-                ← Back
-              </button>
-              <AddToPlaylistMenu songId={song._id} />
-            </>
+            </motion.div>
+          </motion.div>
+
+          {/* Now playing indicator */}
+          {isCurrentSong && isPlaying && (
+            <div className='absolute bottom-2 right-2 flex gap-0.5 items-end'>
+              {[1, 2, 3].map((i) => (
+                <motion.div
+                  key={i}
+                  className='w-1 bg-green-400 rounded-full'
+                  animate={{ height: [4, 12, 4] }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: Infinity,
+                    delay: i * 0.15,
+                    ease: "easeInOut",
+                  }}
+                />
+              ))}
+            </div>
           )}
         </div>
-      )}
-    </div>
+
+        {/* Song info + 3-dot menu */}
+        <div className='flex items-start justify-between gap-1'>
+          <div className='min-w-0 flex-1' onClick={handleClick}>
+            <p className={`font-medium text-sm truncate ${isCurrentSong ? "text-green-400" : "text-white"}`}>
+              {song.title}
+            </p>
+            <p className='text-zinc-400 text-xs truncate mt-0.5'>{song.artist}</p>
+          </div>
+          <div onClick={(e) => e.stopPropagation()}>
+            <SongMenu song={song} />
+          </div>
+        </div>
+      </motion.div>
+    </SongContextMenu>
   );
 };

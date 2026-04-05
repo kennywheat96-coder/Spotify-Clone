@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, X, Loader2, Music2, Mic2, Disc } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { axiosInstance } from "@/lib/axios";
-import { SongContextMenu } from "@/components/SongContextMenu";
+import { SongMenu } from "@/components/SongMenu";
 import { Link } from "react-router-dom";
 import type { Song } from "@/types";
 
@@ -105,6 +105,7 @@ const SearchPage = () => {
           </div>
         )}
 
+        {/* Artists */}
         {artists.length > 0 && (
           <section className='mb-6'>
             <div className='flex items-center gap-2 mb-3'>
@@ -125,6 +126,7 @@ const SearchPage = () => {
           </section>
         )}
 
+        {/* Albums */}
         {albums.length > 0 && (
           <section className='mb-6'>
             <div className='flex items-center gap-2 mb-3'>
@@ -145,6 +147,7 @@ const SearchPage = () => {
           </section>
         )}
 
+        {/* Songs */}
         {songs.length > 0 && (
           <section>
             <div className='flex items-center gap-2 mb-3'>
@@ -153,15 +156,24 @@ const SearchPage = () => {
             </div>
             <div className='space-y-1'>
               {songs.map((song) => (
-                <SongContextMenu key={song._id} songId={song._id}>
-                  <div onClick={() => handleSelect(song)} className='flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800 active:bg-zinc-700 cursor-pointer transition-colors'>
-                    <img src={song.imageUrl} alt={song.title} className='w-12 h-12 rounded object-cover flex-shrink-0' />
-                    <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-white truncate'>{song.title}</p>
-                      <p className='text-xs text-zinc-400 truncate'>{song.artist}</p>
-                    </div>
+                <div
+                  key={song._id}
+                  className='flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800 active:bg-zinc-700 transition-colors'
+                >
+                  <img
+                    src={song.imageUrl}
+                    alt={song.title}
+                    className='w-12 h-12 rounded object-cover flex-shrink-0 cursor-pointer'
+                    onClick={() => handleSelect(song)}
+                  />
+                  <div className='flex-1 min-w-0 cursor-pointer' onClick={() => handleSelect(song)}>
+                    <p className='text-sm font-medium text-white truncate'>{song.title}</p>
+                    <p className='text-xs text-zinc-400 truncate'>{song.artist}</p>
                   </div>
-                </SongContextMenu>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <SongMenu song={song} />
+                  </div>
+                </div>
               ))}
             </div>
           </section>

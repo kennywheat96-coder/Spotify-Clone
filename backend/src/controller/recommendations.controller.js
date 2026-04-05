@@ -37,10 +37,17 @@ export const getRecommendations = async (req, res, next) => {
     let recommendations = [];
 
     if (topArtists.length > 0) {
-      recommendations = await Song.find({
+      const allMatches = await Song.find({
         artist: { $in: topArtists },
         _id: { $nin: heardIds },
-      }).limit(10);
+      });
+
+      // Max 2 songs per artist for diversity
+      const artistCounts = {};
+      recommendations = allMatches.filter((song) => {
+        artistCounts[song.artist] = (artistCounts[song.artist] || 0) + 1;
+        return artistCounts[song.artist] <= 2;
+      }).slice(0, 10);
     }
 
     if (recommendations.length < 10) {

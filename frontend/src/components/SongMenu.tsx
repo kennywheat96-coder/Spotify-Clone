@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import type { Song } from "@/types";
 
 interface SongMenuProps {
-  song: Song & { albumId?: string };
+song: Song;
 }
 
 export const SongMenu = ({ song }: SongMenuProps) => {

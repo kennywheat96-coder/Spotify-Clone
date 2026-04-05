@@ -1,84 +1,127 @@
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { MoreHorizontal, ListPlus, ListEnd, SkipForward, Disc } from "lucide-react";
+import { AddToPlaylistMenu } from "./AddToPlaylistMenu";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { SongContextMenu } from "./SongContextMenu";
-import { Play, Pause } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { Song } from "@/types";
 
-interface SongCardProps {
-  song: Song;
-  index: number;
-  songs: Song[];
+interface SongMenuProps {
+  song: Song & { albumId?: string };
 }
 
-export const SongCard = ({ song, index, songs }: SongCardProps) => {
-  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
-  const isCurrentSong = currentSong?._id === song._id;
+export const SongMenu = ({ song }: SongMenuProps) => {
+  const [open, setOpen] = useState(false);
+  const [showPlaylists, setShowPlaylists] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { queue, currentIndex, setCurrentSong } = usePlayerStore();
 
-  const handleClick = () => {
-    if (isCurrentSong) {
-      togglePlay();
-    } else {
-      playAlbum(songs, index);
+  // Close on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setShowPlaylists(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleAddToQueue = () => {
+    const { queue } = usePlayerStore.getState();
+    usePlayerStore.setState({ queue: [...queue, song] });
+    setOpen(false);
+    import("react-hot-toast").then(({ default: toast }) => toast.success("Added to queue"));
+  };
+
+  const handlePlayNext = () => {
+    const { queue, currentIndex } = usePlayerStore.getState();
+    const newQueue = [...queue];
+    newQueue.splice(currentIndex + 1, 0, song);
+    usePlayerStore.setState({ queue: newQueue });
+    setOpen(false);
+    import("react-hot-toast").then(({ default: toast }) => toast.success("Playing next"));
+  };
+
+  const handleGoToAlbum = () => {
+    if (song.albumId) {
+      navigate(`/albums/${song.albumId}`);
+      setOpen(false);
     }
   };
 
   return (
-    <SongContextMenu songId={song._id}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: index * 0.05 }}
-        onClick={handleClick}
-        className='bg-zinc-800/50 rounded-md p-3 hover:bg-zinc-700/50 transition-all cursor-pointer group'
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+          setShowPlaylists(false);
+        }}
+        className="p-1.5 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-zinc-700/50"
       >
-        <div className='relative mb-3'>
-          <img
-            src={song.imageUrl}
-            alt={song.title}
-            className='w-full aspect-square object-cover rounded-md shadow-lg'
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileHover={{ opacity: 1 }}
-            className='absolute inset-0 bg-black/40 rounded-md flex items-center justify-center'
-          >
-            <motion.div
-              whileTap={{ scale: 0.9 }}
-              className='w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg'
-            >
-              {isCurrentSong && isPlaying ? (
-                <Pause className='h-5 w-5 text-black' />
-              ) : (
-                <Play className='h-5 w-5 text-black' />
-              )}
-            </motion.div>
-          </motion.div>
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
 
-          {/* Now playing indicator */}
-          {isCurrentSong && isPlaying && (
-            <div className='absolute bottom-2 right-2 flex gap-0.5 items-end'>
-              {[1, 2, 3].map((i) => (
-                <motion.div
-                  key={i}
-                  className='w-1 bg-green-400 rounded-full'
-                  animate={{ height: [4, 12, 4] }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: i * 0.15,
-                    ease: "easeInOut",
-                  }}
-                />
-              ))}
-            </div>
+      {open && (
+        <div
+          className="absolute right-0 bottom-full mb-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-[200] overflow-hidden min-w-[200px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!showPlaylists ? (
+            <>
+              {/* Add to Queue */}
+              <button
+                onClick={handleAddToQueue}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
+              >
+                <ListEnd className="h-4 w-4 text-zinc-400" />
+                Add to Queue
+              </button>
+
+              {/* Play Next */}
+              <button
+                onClick={handlePlayNext}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
+              >
+                <SkipForward className="h-4 w-4 text-zinc-400" />
+                Play Next
+              </button>
+
+              {/* Add to Playlist */}
+              <button
+                onClick={() => setShowPlaylists(true)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors"
+              >
+                <ListPlus className="h-4 w-4 text-zinc-400" />
+                Add to Playlist
+              </button>
+
+              {/* Go to Album */}
+              {song.albumId && (
+                <button
+                  onClick={handleGoToAlbum}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-zinc-700 transition-colors border-t border-zinc-700"
+                >
+                  <Disc className="h-4 w-4 text-zinc-400" />
+                  Go to Album
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowPlaylists(false)}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-zinc-400 hover:text-white transition-colors border-b border-zinc-700"
+              >
+                ← Back
+              </button>
+              <AddToPlaylistMenu songId={song._id} />
+            </>
           )}
         </div>
-
-        <p className={`font-medium text-sm truncate ${isCurrentSong ? "text-green-400" : "text-white"}`}>
-          {song.title}
-        </p>
-        <p className='text-zinc-400 text-xs truncate mt-0.5'>{song.artist}</p>
-      </motion.div>
-    </SongContextMenu>
+      )}
+    </div>
   );
 };

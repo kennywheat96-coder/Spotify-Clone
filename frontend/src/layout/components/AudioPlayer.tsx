@@ -11,8 +11,13 @@ const AudioPlayer = () => {
 
   // Handle play/pause
   useEffect(() => {
-    if (isPlaying) audioRef.current?.play();
-    else audioRef.current?.pause();
+    if (isPlaying) {
+      audioRef.current?.play().catch((err) => {
+        console.log("Play error:", err);
+      });
+    } else {
+      audioRef.current?.pause();
+    }
   }, [isPlaying]);
 
   // Handle song ends
@@ -35,40 +40,52 @@ const AudioPlayer = () => {
       audio.currentTime = 0;
       prevSongRef.current = currentSong.audioUrl;
       addRecentlyPlayed(currentSong._id);
-      if (isPlaying) audio.play();
+      if (isPlaying) {
+        audio.play().catch((err) => {
+          console.log("Play error:", err);
+        });
+      }
     }
   }, [currentSong, isPlaying, addRecentlyPlayed]);
 
-  // Media Session API — enables lock screen controls and background playback
+  // Media Session API — lock screen controls + background playback
   useEffect(() => {
     if (!currentSong || !("mediaSession" in navigator)) return;
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentSong.title,
       artist: currentSong.artist,
-      artwork: [{ src: currentSong.imageUrl, sizes: "512x512", type: "image/jpeg" }],
+      artwork: [
+        { src: currentSong.imageUrl, sizes: "96x96", type: "image/jpeg" },
+        { src: currentSong.imageUrl, sizes: "512x512", type: "image/jpeg" },
+      ],
     });
 
     navigator.mediaSession.setActionHandler("play", () => {
-      usePlayerStore.setState({ isPlaying: true });
       audioRef.current?.play();
+      usePlayerStore.setState({ isPlaying: true });
     });
 
     navigator.mediaSession.setActionHandler("pause", () => {
-      usePlayerStore.setState({ isPlaying: false });
       audioRef.current?.pause();
+      usePlayerStore.setState({ isPlaying: false });
     });
 
-    navigator.mediaSession.setActionHandler("nexttrack", () => {
-      playNext();
-    });
+    navigator.mediaSession.setActionHandler("nexttrack", () => playNext());
+    navigator.mediaSession.setActionHandler("previoustrack", () => playPrevious());
 
-    navigator.mediaSession.setActionHandler("previoustrack", () => {
-      playPrevious();
-    });
-  }, [currentSong, playNext, playPrevious]);
+    // Update playback state so OS knows it's playing
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [currentSong, isPlaying, playNext, playPrevious]);
 
-  return <audio ref={audioRef} crossOrigin="anonymous" />;
+  return (
+    <audio
+      ref={audioRef}
+      playsInline
+      webkit-playsinline="true"
+      preload="auto"
+    />
+  );
 };
 
 export default AudioPlayer;

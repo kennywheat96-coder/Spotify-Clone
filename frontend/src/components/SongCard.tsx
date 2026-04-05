@@ -14,7 +14,7 @@ export const SongMenu = ({ song }: SongMenuProps) => {
   const [showPlaylists, setShowPlaylists] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { queue, currentIndex, setCurrentSong } = usePlayerStore();
+ 
 
   // Close on outside click
   useEffect(() => {

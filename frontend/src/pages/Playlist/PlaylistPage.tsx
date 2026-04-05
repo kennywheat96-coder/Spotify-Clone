@@ -6,14 +6,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { SongMenu } from "@/components/SongMenu";
-import { Clock, ListMusic, Play, Pause, Trash2 } from "lucide-react";
+import { Clock, ListMusic, Play, Pause, Trash2, Shuffle } from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
 import type { Song } from "@/types";
 
 const PlaylistPage = () => {
   const { playlistId } = useParams();
   const { currentPlaylist, fetchPlaylistById, deletePlaylist, removeSongFromPlaylist } = usePlaylistStore();
-  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
+  const { currentSong, isPlaying, playAlbum, togglePlay, toggleShuffle, isShuffle } = usePlayerStore();
   const { user } = useUser();
 
   useEffect(() => {
@@ -33,6 +33,12 @@ const PlaylistPage = () => {
     } else {
       playAlbum(songs, 0);
     }
+  };
+
+  const handleShuffle = () => {
+    const shuffled = [...songs].sort(() => Math.random() - 0.5);
+    playAlbum(shuffled, 0);
+    if (!isShuffle) toggleShuffle();
   };
 
   const handleDelete = async () => {
@@ -67,7 +73,7 @@ const PlaylistPage = () => {
         </div>
 
         {/* Controls */}
-        <div className='flex items-center gap-6 px-6 py-4 bg-zinc-900'>
+        <div className='flex items-center gap-4 px-6 py-4 bg-zinc-900'>
           <Button
             onClick={handlePlayPause}
             size='icon'
@@ -81,17 +87,29 @@ const PlaylistPage = () => {
             )}
           </Button>
 
-{isCurrentPlaylistPlaying && (
-  <div className='hidden sm:block flex-1'>
-    <AudioVisualizer className='w-full h-12' />
-  </div>
-)}
+          {/* Shuffle button */}
+          <Button
+            onClick={handleShuffle}
+            size='icon'
+            variant='ghost'
+            className={`w-10 h-10 transition-colors ${isShuffle ? "text-green-500" : "text-zinc-400 hover:text-white"}`}
+            disabled={songs.length === 0}
+          >
+            <Shuffle className='h-5 w-5' />
+          </Button>
+
+          {isCurrentPlaylistPlaying && (
+            <div className='hidden sm:block flex-1'>
+              <AudioVisualizer className='w-full h-12' />
+            </div>
+          )}
+
           {isOwner && (
             <Button
               onClick={handleDelete}
               size='icon'
               variant='ghost'
-              className='text-zinc-400 hover:text-red-400 transition-colors'
+              className='text-zinc-400 hover:text-red-400 transition-colors ml-auto'
               title='Delete playlist'
             >
               <Trash2 className='h-5 w-5' />

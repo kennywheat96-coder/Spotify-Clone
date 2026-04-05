@@ -6,7 +6,7 @@ const AudioPlayer = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevSongRef = useRef<string | null>(null);
 
-  const { currentSong, isPlaying, playNext } = usePlayerStore();
+  const { currentSong, isPlaying, playNext, playPrevious } = usePlayerStore();
   const { addRecentlyPlayed } = useRecentlyPlayedStore();
 
   // Handle play/pause
@@ -38,6 +38,35 @@ const AudioPlayer = () => {
       if (isPlaying) audio.play();
     }
   }, [currentSong, isPlaying, addRecentlyPlayed]);
+
+  // Media Session API — enables lock screen controls and background playback
+  useEffect(() => {
+    if (!currentSong || !("mediaSession" in navigator)) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentSong.title,
+      artist: currentSong.artist,
+      artwork: [{ src: currentSong.imageUrl, sizes: "512x512", type: "image/jpeg" }],
+    });
+
+    navigator.mediaSession.setActionHandler("play", () => {
+      usePlayerStore.setState({ isPlaying: true });
+      audioRef.current?.play();
+    });
+
+    navigator.mediaSession.setActionHandler("pause", () => {
+      usePlayerStore.setState({ isPlaying: false });
+      audioRef.current?.pause();
+    });
+
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      playNext();
+    });
+
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      playPrevious();
+    });
+  }, [currentSong, playNext, playPrevious]);
 
   return <audio ref={audioRef} crossOrigin="anonymous" />;
 };

@@ -17,50 +17,85 @@ export const QueuePanel = () => {
     moveToFirst,
   } = usePlayerStore();
 
-  const dragFromIndex = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+
+  const dragFromIndex = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDragging = useRef(false);
+  const pointerStartY = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (!isQueueVisible) return null;
 
   const upNext = queue.slice(currentIndex + 1);
   const prevSongs = queue.slice(0, currentIndex);
 
-  // Drag handlers
-  const handleDragStart = (absoluteIndex: number) => {
-    dragFromIndex.current = absoluteIndex;
-  };
-
-  const handleDragOver = (e: React.DragEvent, absoluteIndex: number) => {
-    e.preventDefault();
-    setDragOverIndex(absoluteIndex);
-  };
-
-  const handleDrop = (absoluteIndex: number) => {
-    if (dragFromIndex.current !== null && dragFromIndex.current !== absoluteIndex) {
-      reorderQueue(dragFromIndex.current, absoluteIndex);
-    }
-    dragFromIndex.current = null;
-    setDragOverIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    dragFromIndex.current = null;
-    setDragOverIndex(null);
-  };
-
-  // Long press handlers (500ms = move to first)
-  const handleTouchStart = (absoluteIndex: number) => {
+  const handlePointerDown = (e: React.PointerEvent, absoluteIndex: number) => {
     longPressTimer.current = setTimeout(() => {
-      moveToFirst(absoluteIndex);
+      if (!isDragging.current) {
+        moveToFirst(absoluteIndex);
+      }
     }, 500);
+
+    pointerStartY.current = e.clientY;
+    dragFromIndex.current = absoluteIndex;
+    isDragging.current = false;
+
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const deltaY = Math.abs(e.clientY - pointerStartY.current);
+
+    if (deltaY > 8 && longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
+    if (dragFromIndex.current === null) return;
+    if (deltaY < 8) return;
+
+    isDragging.current = true;
+    setDraggingIndex(dragFromIndex.current);
+
+    if (!containerRef.current) return;
+    const rows = containerRef.current.querySelectorAll("[data-queue-item]");
+    let closestIndex: number | null = null;
+    let closestDist = Infinity;
+
+    rows.forEach((row) => {
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const dist = Math.abs(e.clientY - midY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = Number((row as HTMLElement).dataset.queueItem);
+      }
+    });
+
+    setDragOverIndex(closestIndex);
+  };
+
+  const handlePointerUp = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+
+    if (
+      isDragging.current &&
+      dragFromIndex.current !== null &&
+      dragOverIndex !== null &&
+      dragFromIndex.current !== dragOverIndex
+    ) {
+      reorderQueue(dragFromIndex.current, dragOverIndex);
+    }
+
+    dragFromIndex.current = null;
+    isDragging.current = false;
+    setDraggingIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -81,7 +116,11 @@ export const QueuePanel = () => {
             <div>
               <p className="text-xs text-zinc-400 uppercase tracking-wider mb-3">Now Playing</p>
               <div className="flex items-center gap-3 bg-zinc-800 rounded-md p-2">
-                <img src={currentSong.imageUrl} alt={currentSong.title} className="w-10 h-10 rounded object-cover" />
+                <img
+                  src={currentSong.imageUrl}
+                  alt={currentSong.title}
+                  className="w-10 h-10 rounded object-cover"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-green-400 truncate">{currentSong.title}</p>
                   <p className="text-xs text-zinc-400 truncate">{currentSong.artist}</p>
@@ -97,47 +136,43 @@ export const QueuePanel = () => {
                 Next Up ({upNext.length})
               </p>
               <p className="text-xs text-zinc-600 mb-2">Drag to reorder · Hold to play next</p>
-              <div className="space-y-1">
+              <div className="space-y-1" ref={containerRef}>
                 {upNext.map((song, i) => {
                   const absoluteIndex = currentIndex + 1 + i;
-                  const isDragOver = dragOverIndex === absoluteIndex;
+                  const isBeingDragged = draggingIndex === absoluteIndex;
+                  const isDropTarget = dragOverIndex === absoluteIndex && !isBeingDragged;
 
                   return (
                     <div
                       key={`${song._id}-${i}`}
-                      draggable
-                      onDragStart={() => handleDragStart(absoluteIndex)}
-                      onDragOver={(e) => handleDragOver(e, absoluteIndex)}
-                      onDrop={() => handleDrop(absoluteIndex)}
-                      onDragEnd={handleDragEnd}
-                      onTouchStart={() => handleTouchStart(absoluteIndex)}
-                      onTouchEnd={handleTouchEnd}
-                      onTouchMove={handleTouchEnd}
-                      className={`flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 group transition-all cursor-grab active:cursor-grabbing
-                        ${isDragOver ? "border-t-2 border-green-500 bg-zinc-800/50" : ""}`}
+                      data-queue-item={absoluteIndex}
+                      onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
+                      onPointerMove={(e) => handlePointerMove(e)}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      className={`flex items-center gap-3 p-2 rounded-md group transition-all select-none
+                        ${isBeingDragged ? "opacity-40 bg-zinc-700" : "hover:bg-zinc-800"}
+                        ${isDropTarget ? "border-t-2 border-green-500" : ""}
+                      `}
+                      style={{ touchAction: "none" }}
                     >
-                      {/* Drag handle */}
                       <GripVertical className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0 transition-colors" />
 
                       <img
                         src={song.imageUrl}
                         alt={song.title}
-                        className="w-9 h-9 rounded object-cover flex-shrink-0"
-                        onClick={() => setCurrentSong(song)}
+                        className="w-9 h-9 rounded object-cover flex-shrink-0 pointer-events-none"
                       />
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => setCurrentSong(song)}
-                      >
+                      <div className="flex-1 min-w-0 pointer-events-none">
                         <p className="text-sm text-white truncate group-hover:text-green-400 transition-colors">
                           {song.title}
                         </p>
                         <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
                       </div>
                       <button
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={() => removeFromQueue(absoluteIndex)}
                         className="p-1 text-zinc-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                        title="Remove"
                       >
                         <X className="h-3 w-3" />
                       </button>

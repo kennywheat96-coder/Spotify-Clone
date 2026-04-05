@@ -25,15 +25,6 @@ const AudioPlayer = () => {
 
     const isSongChange = prevSongIdRef.current !== currentSong._id;
 
-    console.log("🎵 AudioPlayer:", {
-      isSongChange,
-      isPlaying,
-      prevId: prevSongIdRef.current,
-      newId: currentSong._id,
-      audioSrc: audio.src?.slice(-30),
-      paused: audio.paused,
-    });
-
     if (isSongChange) {
       prevSongIdRef.current = currentSong._id;
       audio.src = currentSong.audioUrl;
@@ -42,11 +33,11 @@ const AudioPlayer = () => {
 
       if (isPlaying) {
         audio.load();
-        audio.play().catch((err) => console.log("❌ Play error:", err));
+        audio.play().catch((err) => console.log("Play error:", err));
       }
     } else {
       if (isPlaying) {
-        audio.play().catch((err) => console.log("❌ Play error:", err));
+        audio.play().catch((err) => console.log("Play error:", err));
       } else {
         audio.pause();
       }

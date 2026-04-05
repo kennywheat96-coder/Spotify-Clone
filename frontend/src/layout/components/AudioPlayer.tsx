@@ -18,29 +18,35 @@ const AudioPlayer = () => {
     return () => audio.removeEventListener("ended", handleEnded);
   }, [playNext]);
 
-  // Main playback effect — handles both song changes and play/pause
+  // Main playback effect
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentSong) return;
 
     const isSongChange = prevSongIdRef.current !== currentSong._id;
 
+    console.log("🎵 AudioPlayer:", {
+      isSongChange,
+      isPlaying,
+      prevId: prevSongIdRef.current,
+      newId: currentSong._id,
+      audioSrc: audio.src?.slice(-30),
+      paused: audio.paused,
+    });
+
     if (isSongChange) {
-      // New song — load and play
       prevSongIdRef.current = currentSong._id;
       audio.src = currentSong.audioUrl;
       audio.currentTime = 0;
       addRecentlyPlayed(currentSong._id);
 
       if (isPlaying) {
-        const playPromise = audio.play();
-        if (playPromise) playPromise.catch((err) => console.log("Play error:", err));
+        audio.load();
+        audio.play().catch((err) => console.log("❌ Play error:", err));
       }
     } else {
-      // Same song — just play or pause
       if (isPlaying) {
-        const playPromise = audio.play();
-        if (playPromise) playPromise.catch((err) => console.log("Play error:", err));
+        audio.play().catch((err) => console.log("❌ Play error:", err));
       } else {
         audio.pause();
       }

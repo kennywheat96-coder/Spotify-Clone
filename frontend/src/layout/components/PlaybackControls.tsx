@@ -6,7 +6,7 @@ import { AddToPlaylistMenu } from "@/components/AddToPlaylistMenu";
 import {
   ChevronDown, Laptop2, ListMusic, Mic2, Pause, Play,
   Repeat, Repeat1, Shuffle, SkipBack, SkipForward,
-  Volume1, Volume2, VolumeX, ListPlus, X, ArrowUp
+  Volume1, Volume2, VolumeX, ListPlus, X, GripVertical
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,7 +23,7 @@ export const PlaybackControls = () => {
     repeatMode, cycleRepeat,
     isQueueVisible, toggleQueue,
     queue, currentIndex,
-    setCurrentSong, removeFromQueue, moveUpInQueue,
+removeFromQueue, reorderQueue, moveToFirst,
   } = usePlayerStore();
 
   const [volume, setVolume] = useState(75);
@@ -33,6 +33,15 @@ export const PlaybackControls = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Mobile queue drag state
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragFromIndex = useRef<number | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDragging = useRef(false);
+  const pointerStartY = useRef(0);
+  const mobileQueueRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     audioRef.current = document.querySelector("audio");
@@ -67,6 +76,72 @@ export const PlaybackControls = () => {
     const newVolume = volume === 0 ? 75 : 0;
     setVolume(newVolume);
     if (audioRef.current) audioRef.current.volume = newVolume / 100;
+  };
+
+  // Mobile queue pointer handlers
+  const handlePointerDown = (e: React.PointerEvent, absoluteIndex: number) => {
+    longPressTimer.current = setTimeout(() => {
+      if (!isDragging.current) {
+        moveToFirst(absoluteIndex);
+      }
+    }, 500);
+
+    pointerStartY.current = e.clientY;
+    dragFromIndex.current = absoluteIndex;
+    isDragging.current = false;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const deltaY = Math.abs(e.clientY - pointerStartY.current);
+
+    if (deltaY > 8 && longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
+    if (dragFromIndex.current === null || deltaY < 8) return;
+
+    isDragging.current = true;
+    setDraggingIndex(dragFromIndex.current);
+
+    if (!mobileQueueRef.current) return;
+    const rows = mobileQueueRef.current.querySelectorAll("[data-queue-item]");
+    let closestIndex: number | null = null;
+    let closestDist = Infinity;
+
+    rows.forEach((row) => {
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const dist = Math.abs(e.clientY - midY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = Number((row as HTMLElement).dataset.queueItem);
+      }
+    });
+
+    setDragOverIndex(closestIndex);
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
+    if (
+      isDragging.current &&
+      dragFromIndex.current !== null &&
+      dragOverIndex !== null &&
+      dragFromIndex.current !== dragOverIndex
+    ) {
+      reorderQueue(dragFromIndex.current, dragOverIndex);
+    }
+
+    dragFromIndex.current = null;
+    isDragging.current = false;
+    setDraggingIndex(null);
+    setDragOverIndex(null);
   };
 
   const VolumeIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2;
@@ -238,9 +313,7 @@ export const PlaybackControls = () => {
               {/* Queue view */}
               {showQueue && !showAddToPlaylist && (
                 <div className='flex-1 overflow-y-auto space-y-2'>
-                  <p className='text-xs text-zinc-400 uppercase tracking-wider mb-3'>
-                    Now Playing
-                  </p>
+                  <p className='text-xs text-zinc-400 uppercase tracking-wider mb-3'>Now Playing</p>
                   <div className='flex items-center gap-3 bg-zinc-800/50 rounded-lg p-3 mb-4'>
                     <img src={currentSong.imageUrl} alt={currentSong.title} className='w-10 h-10 rounded object-cover' />
                     <div className='flex-1 min-w-0'>
@@ -251,36 +324,51 @@ export const PlaybackControls = () => {
 
                   {upNext.length > 0 && (
                     <>
-                      <p className='text-xs text-zinc-400 uppercase tracking-wider mb-2'>
+                      <p className='text-xs text-zinc-400 uppercase tracking-wider mb-1'>
                         Next Up ({upNext.length})
                       </p>
-                      {upNext.map((song, i) => {
-                        const absoluteIndex = currentIndex + 1 + i;
-                        return (
-                          <div key={`${song._id}-${i}`}
-                            className='flex items-center gap-3 p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/60'>
-                            <img src={song.imageUrl} alt={song.title}
-                              className='w-10 h-10 rounded object-cover cursor-pointer flex-shrink-0'
-                              onClick={() => setCurrentSong(song)} />
-                            <div className='flex-1 min-w-0 cursor-pointer' onClick={() => setCurrentSong(song)}>
-                              <p className='text-sm text-white truncate'>{song.title}</p>
-                              <p className='text-xs text-zinc-400 truncate'>{song.artist}</p>
-                            </div>
-                            <div className='flex items-center gap-2 flex-shrink-0'>
-                              {i > 0 && (
-                                <button onClick={() => moveUpInQueue(absoluteIndex)}
-                                  className='p-1.5 text-zinc-400 hover:text-white transition-colors'>
-                                  <ArrowUp className='h-4 w-4' />
-                                </button>
-                              )}
-                              <button onClick={() => removeFromQueue(absoluteIndex)}
-                                className='p-1.5 text-zinc-400 hover:text-red-400 transition-colors'>
+                      <p className='text-xs text-zinc-600 mb-2'>Drag to reorder · Hold to play next</p>
+                      <div className='space-y-1' ref={mobileQueueRef}>
+                        {upNext.map((song, i) => {
+                          const absoluteIndex = currentIndex + 1 + i;
+                          const isBeingDragged = draggingIndex === absoluteIndex;
+                          const isDropTarget = dragOverIndex === absoluteIndex && !isBeingDragged;
+
+                          return (
+                            <div
+                              key={`${song._id}-${i}`}
+                              data-queue-item={absoluteIndex}
+                              onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
+                              onPointerMove={(e) => handlePointerMove(e)}
+                              onPointerUp={handlePointerUp}
+                              onPointerCancel={handlePointerUp}
+                              className={`flex items-center gap-3 p-3 rounded-lg select-none transition-all
+                                ${isBeingDragged ? "opacity-40 bg-zinc-700" : "bg-zinc-800/30"}
+                                ${isDropTarget ? "border-t-2 border-green-500" : ""}
+                              `}
+                              style={{ touchAction: "none" }}
+                            >
+                              <GripVertical className='h-4 w-4 text-zinc-600 flex-shrink-0' />
+                              <img
+                                src={song.imageUrl}
+                                alt={song.title}
+                                className='w-10 h-10 rounded object-cover flex-shrink-0 pointer-events-none'
+                              />
+                              <div className='flex-1 min-w-0 pointer-events-none'>
+                                <p className='text-sm text-white truncate'>{song.title}</p>
+                                <p className='text-xs text-zinc-400 truncate'>{song.artist}</p>
+                              </div>
+                              <button
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={() => removeFromQueue(absoluteIndex)}
+                                className='p-1.5 text-zinc-400 hover:text-red-400 transition-colors flex-shrink-0'
+                              >
                                 <X className='h-4 w-4' />
                               </button>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </>
                   )}
 
@@ -293,7 +381,6 @@ export const PlaybackControls = () => {
               {/* Normal player view */}
               {!showQueue && !showAddToPlaylist && (
                 <>
-                  {/* Album art */}
                   <div className='flex justify-center mb-8'>
                     <img src={currentSong.imageUrl} alt={currentSong.title}
                       className={`w-64 h-64 rounded-2xl object-cover shadow-2xl transition-all duration-300 ${
@@ -302,7 +389,6 @@ export const PlaybackControls = () => {
                     />
                   </div>
 
-                  {/* Song info + like */}
                   <div className='flex items-center justify-between mb-6'>
                     <div className='flex-1 min-w-0 mr-4'>
                       <p className='text-xl font-bold text-white truncate'>{currentSong.title}</p>
@@ -311,7 +397,6 @@ export const PlaybackControls = () => {
                     <LikeButton songId={currentSong._id} size='sm' />
                   </div>
 
-                  {/* Progress */}
                   <div className='mb-4'>
                     <Slider value={[currentTime]} max={duration || 100} step={1}
                       className='w-full hover:cursor-grab active:cursor-grabbing' onValueChange={handleSeek} />
@@ -321,7 +406,6 @@ export const PlaybackControls = () => {
                     </div>
                   </div>
 
-                  {/* Controls */}
                   <div className='flex items-center justify-between mb-8'>
                     <button onClick={toggleShuffle}
                       className={`p-2 transition-colors ${isShuffle ? "text-green-500" : "text-zinc-400"}`}>
@@ -343,7 +427,6 @@ export const PlaybackControls = () => {
                     </button>
                   </div>
 
-                  {/* Volume */}
                   <div className='flex items-center gap-3'>
                     <button onClick={toggleMute} className='text-zinc-400'>
                       <VolumeIcon className='h-4 w-4' />

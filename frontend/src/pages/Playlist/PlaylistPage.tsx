@@ -28,11 +28,8 @@ const PlaylistPage = () => {
     songs.some((s) => s._id === currentSong?._id) && isPlaying;
 
   const handlePlayPause = () => {
-    if (isCurrentPlaylistPlaying) {
-      togglePlay();
-    } else {
-      playAlbum(songs, 0);
-    }
+    if (isCurrentPlaylistPlaying) togglePlay();
+    else playAlbum(songs, 0);
   };
 
   const handleShuffle = () => {
@@ -52,18 +49,20 @@ const PlaylistPage = () => {
       <ScrollArea className='h-full'>
 
         {/* Header */}
-        <div className='relative min-h-[340px] bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900 p-6'>
-          <div className='flex flex-col md:flex-row items-center md:items-end gap-6 mt-10'>
-            <div className='size-52 rounded-md bg-zinc-700 flex items-center justify-center flex-shrink-0 shadow-2xl'>
+        <div className='relative bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900 p-4 sm:p-6'>
+          <div className='flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 mt-4 sm:mt-10'>
+            <div className='w-36 h-36 sm:size-52 rounded-md bg-zinc-700 flex items-center justify-center flex-shrink-0 shadow-2xl'>
               {currentPlaylist.imageUrl ? (
                 <img src={currentPlaylist.imageUrl} alt={currentPlaylist.name} className='size-full object-cover rounded-md' />
               ) : (
-                <ListMusic className='size-20 text-zinc-400' />
+                <ListMusic className='size-12 sm:size-20 text-zinc-400' />
               )}
             </div>
-            <div className='flex flex-col gap-3'>
+            <div className='flex flex-col gap-2 text-center sm:text-left'>
               <p className='text-xs font-semibold uppercase text-zinc-400'>Playlist</p>
-              <h1 className='text-4xl md:text-6xl font-bold text-white'>{currentPlaylist.name}</h1>
+              <h1 className='text-3xl sm:text-5xl md:text-6xl font-bold text-white line-clamp-2'>
+                {currentPlaylist.name}
+              </h1>
               {currentPlaylist.description && (
                 <p className='text-zinc-400 text-sm'>{currentPlaylist.description}</p>
               )}
@@ -73,21 +72,20 @@ const PlaylistPage = () => {
         </div>
 
         {/* Controls */}
-        <div className='flex items-center gap-4 px-6 py-4 bg-zinc-900'>
+        <div className='flex items-center gap-4 px-4 sm:px-6 py-4 bg-zinc-900'>
           <Button
             onClick={handlePlayPause}
             size='icon'
-            className='w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all'
+            className='w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all'
             disabled={songs.length === 0}
           >
             {isCurrentPlaylistPlaying ? (
-              <Pause className='h-7 w-7 text-black' />
+              <Pause className='h-5 w-5 sm:h-7 sm:w-7 text-black' />
             ) : (
-              <Play className='h-7 w-7 text-black' />
+              <Play className='h-5 w-5 sm:h-7 sm:w-7 text-black' />
             )}
           </Button>
 
-          {/* Shuffle button */}
           <Button
             onClick={handleShuffle}
             size='icon'
@@ -118,12 +116,20 @@ const PlaylistPage = () => {
         </div>
 
         {/* Song list */}
-        <div className='px-6 pb-6 bg-zinc-900'>
-          <div className='grid grid-cols-[16px_4fr_2fr_auto] gap-4 px-4 py-2 text-sm text-zinc-400 border-b border-zinc-800 mb-2'>
+        <div className='px-2 sm:px-6 pb-6 bg-zinc-900'>
+          {/* Desktop header */}
+          <div className='hidden sm:grid grid-cols-[16px_4fr_2fr_auto] gap-4 px-4 py-2 text-sm text-zinc-400 border-b border-zinc-800 mb-2'>
             <div>#</div>
             <div>Title</div>
             <div>Artist</div>
             <div className='flex justify-end'><Clock className='h-4 w-4' /></div>
+          </div>
+
+          {/* Mobile header */}
+          <div className='grid sm:hidden grid-cols-[16px_1fr_auto] gap-3 px-3 py-2 text-sm text-zinc-400 border-b border-zinc-800 mb-2'>
+            <div>#</div>
+            <div>Title</div>
+            <div />
           </div>
 
           {songs.length === 0 ? (
@@ -140,7 +146,7 @@ const PlaylistPage = () => {
                   <div
                     key={song._id}
                     onClick={() => playAlbum(songs, index)}
-                    className={`grid grid-cols-[16px_4fr_2fr_auto] gap-4 px-4 py-2 text-sm rounded-md group cursor-pointer hover:bg-zinc-800 ${
+                    className={`grid grid-cols-[16px_1fr_auto] sm:grid-cols-[16px_4fr_2fr_auto] gap-3 sm:gap-4 px-3 sm:px-4 py-2 text-sm rounded-md group cursor-pointer hover:bg-zinc-800 ${
                       isCurrentSong ? "bg-zinc-800 text-green-400" : "text-zinc-400"
                     }`}
                   >
@@ -152,16 +158,20 @@ const PlaylistPage = () => {
                       )}
                     </div>
 
-                    <div className='flex items-center gap-3'>
-                      <img src={song.imageUrl} alt={song.title} className='size-10 rounded object-cover' />
-                      <p className={`font-medium truncate ${isCurrentSong ? "text-green-400" : "text-white"}`}>
-                        {song.title}
-                      </p>
+                    <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
+                      <img src={song.imageUrl} alt={song.title} className='size-9 sm:size-10 rounded object-cover flex-shrink-0' />
+                      <div className='min-w-0'>
+                        <p className={`font-medium truncate ${isCurrentSong ? "text-green-400" : "text-white"}`}>
+                          {song.title}
+                        </p>
+                        <p className='text-xs text-zinc-400 truncate sm:hidden'>{song.artist}</p>
+                      </div>
                     </div>
 
-                    <div className='flex items-center'>{song.artist}</div>
+                    {/* Artist - desktop only */}
+                    <div className='hidden sm:flex items-center'>{song.artist}</div>
 
-                    <div className='flex items-center justify-end gap-2' onClick={(e) => e.stopPropagation()}>
+                    <div className='flex items-center justify-end gap-1 sm:gap-2' onClick={(e) => e.stopPropagation()}>
                       {isOwner && (
                         <button
                           onClick={(e) => {

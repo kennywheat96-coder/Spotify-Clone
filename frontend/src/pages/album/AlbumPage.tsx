@@ -58,16 +58,19 @@ const AlbumPage = () => {
           />
 
           <div className='relative z-10'>
-            <div className='flex p-6 gap-6 pb-8'>
+            {/* Header */}
+            <div className='flex flex-col sm:flex-row p-4 sm:p-6 gap-4 sm:gap-6 pb-6 sm:pb-8 items-center sm:items-end'>
               <img
                 src={currentAlbum?.imageUrl}
                 alt={currentAlbum?.title}
-                className='w-[240px] h-[240px] shadow-xl rounded'
+                className='w-36 h-36 sm:w-[240px] sm:h-[240px] shadow-xl rounded flex-shrink-0'
               />
-              <div className='flex flex-col justify-end'>
+              <div className='flex flex-col justify-end text-center sm:text-left'>
                 <p className='text-sm font-medium'>Album</p>
-                <h1 className='text-7xl font-bold my-4'>{currentAlbum?.title}</h1>
-                <div className='flex items-center gap-2 text-sm text-zinc-100'>
+                <h1 className='text-3xl sm:text-5xl lg:text-7xl font-bold my-2 sm:my-4 line-clamp-2'>
+                  {currentAlbum?.title}
+                </h1>
+                <div className='flex items-center justify-center sm:justify-start gap-2 text-sm text-zinc-100 flex-wrap'>
                   <span className='font-medium text-white'>{currentAlbum?.artist}</span>
                   <span>• {currentAlbum?.songs.length} songs</span>
                   <span>• {currentAlbum?.releaseYear}</span>
@@ -75,20 +78,20 @@ const AlbumPage = () => {
               </div>
             </div>
 
-            <div className='px-6 pb-4 flex items-center gap-4'>
+            {/* Controls */}
+            <div className='px-4 sm:px-6 pb-4 flex items-center gap-4'>
               <Button
                 onClick={handlePlayAlbum}
                 size='icon'
-                className='w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all'
+                className='w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all'
               >
                 {isCurrentAlbumPlaying ? (
-                  <Pause className='h-7 w-7 text-black' />
+                  <Pause className='h-5 w-5 sm:h-7 sm:w-7 text-black' />
                 ) : (
-                  <Play className='h-7 w-7 text-black' />
+                  <Play className='h-5 w-5 sm:h-7 sm:w-7 text-black' />
                 )}
               </Button>
 
-              {/* Shuffle button */}
               <Button
                 onClick={handleShuffle}
                 size='icon'
@@ -105,8 +108,10 @@ const AlbumPage = () => {
               )}
             </div>
 
+            {/* Song list */}
             <div className='bg-black/20 backdrop-blur-sm'>
-              <div className='grid grid-cols-[16px_4fr_2fr_1fr_auto] gap-4 px-10 py-2 text-sm text-zinc-400 border-b border-white/5'>
+              {/* Desktop header */}
+              <div className='hidden sm:grid grid-cols-[16px_4fr_2fr_1fr_auto] gap-4 px-10 py-2 text-sm text-zinc-400 border-b border-white/5'>
                 <div>#</div>
                 <div>Title</div>
                 <div>Released Date</div>
@@ -114,15 +119,23 @@ const AlbumPage = () => {
                 <div />
               </div>
 
-              <div className='px-6'>
-                <div className='space-y-2 py-4'>
+              {/* Mobile header */}
+              <div className='grid sm:hidden grid-cols-[16px_1fr_auto_auto] gap-3 px-4 py-2 text-sm text-zinc-400 border-b border-white/5'>
+                <div>#</div>
+                <div>Title</div>
+                <div><Clock className='h-4 w-4' /></div>
+                <div />
+              </div>
+
+              <div className='px-2 sm:px-6'>
+                <div className='space-y-1 py-4'>
                   {currentAlbum?.songs.map((song, index) => {
                     const isCurrentSong = currentSong?._id === song._id;
                     return (
                       <div
                         key={song._id}
                         onClick={() => handlePlaySong(index)}
-                        className={`grid grid-cols-[16px_4fr_2fr_1fr_auto] gap-4 px-4 py-2 text-sm
+                        className={`grid grid-cols-[16px_1fr_auto_auto] sm:grid-cols-[16px_4fr_2fr_1fr_auto] gap-3 sm:gap-4 px-3 sm:px-4 py-2 text-sm
                           text-zinc-400 hover:bg-white/5 rounded-md group cursor-pointer ${
                             isCurrentSong ? "bg-white/10 text-green-400" : ""
                           }`}
@@ -138,25 +151,26 @@ const AlbumPage = () => {
                           )}
                         </div>
 
-                        <div className='flex items-center gap-3'>
-                          <img src={song.imageUrl} alt={song.title} className='size-10' />
-                          <div>
-                            <div className={`font-medium ${isCurrentSong ? "text-green-400" : "text-white"}`}>
+                        <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
+                          <img src={song.imageUrl} alt={song.title} className='size-9 sm:size-10 flex-shrink-0' />
+                          <div className='min-w-0'>
+                            <div className={`font-medium truncate ${isCurrentSong ? "text-green-400" : "text-white"}`}>
                               {song.title}
                             </div>
-                            <div>{song.artist}</div>
+                            <div className='truncate text-xs sm:text-sm'>{song.artist}</div>
                           </div>
                         </div>
 
-                        <div className='flex items-center'>
+                        {/* Released date - desktop only */}
+                        <div className='hidden sm:flex items-center'>
                           {song.createdAt.split("T")[0]}
                         </div>
 
-                        <div className='flex items-center'>
+                        <div className='flex items-center text-xs sm:text-sm'>
                           {formatDuration(song.duration)}
                         </div>
 
-                        <div className='flex items-center gap-2' onClick={(e) => e.stopPropagation()}>
+                        <div className='flex items-center gap-1 sm:gap-2' onClick={(e) => e.stopPropagation()}>
                           <LikeButton songId={song._id} size='sm' />
                           <SongMenu song={song} />
                         </div>

@@ -1,17 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { axiosInstance } from "@/lib/axios";
-import { Search, Pencil, Check, X } from "lucide-react";
+import { Search, Pencil, Check, X, Camera } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 const ArtistsTabContent = () => {
   const { songs, fetchSongs } = useMusicStore();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [editingArtist, setEditingArtist] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingArtist, setUploadingArtist] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadingForArtist = useRef<string | null>(null);
 
-  // Build unique artist list with song counts from songs already in store
   const artists = useMemo(() => {
     const map = new Map<string, { name: string; count: number; imageUrl: string }>();
     songs.forEach((song) => {
@@ -32,7 +36,6 @@ const ArtistsTabContent = () => {
       setEditingArtist(null);
       return;
     }
-
     setIsLoading(true);
     try {
       const res = await axiosInstance.post("/admin/artists/rename", {
@@ -50,6 +53,32 @@ const ArtistsTabContent = () => {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const artistName = uploadingForArtist.current;
+    if (!file || !artistName) return;
+
+    setUploadingArtist(artistName);
+    try {
+      const formData = new FormData();
+      formData.append("name", artistName);
+      formData.append("imageFile", file);
+      await axiosInstance.post("/admin/artists/image", formData);
+      toast.success(`Photo updated for ${artistName}`);
+    } catch {
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingArtist(null);
+      uploadingForArtist.current = null;
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const triggerUpload = (artistName: string) => {
+    uploadingForArtist.current = artistName;
+    fileInputRef.current?.click();
+  };
+
   const startEdit = (artist: string) => {
     setEditingArtist(artist);
     setNewName(artist);
@@ -62,6 +91,15 @@ const ArtistsTabContent = () => {
 
   return (
     <div className="space-y-4">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoUpload}
+      />
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
@@ -87,7 +125,8 @@ const ArtistsTabContent = () => {
             <img
               src={artist.imageUrl}
               alt={artist.name}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0 cursor-pointer"
+              onClick={() => navigate(`/artists/${encodeURIComponent(artist.name)}`)}
             />
 
             {/* Name / Edit input */}
@@ -104,7 +143,10 @@ const ArtistsTabContent = () => {
                   className="w-full bg-zinc-700 border border-zinc-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-green-500"
                 />
               ) : (
-                <div>
+                <div
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/artists/${encodeURIComponent(artist.name)}`)}
+                >
                   <p className="text-sm font-medium text-white truncate">{artist.name}</p>
                   <p className="text-xs text-zinc-400">{artist.count} songs</p>
                 </div>
@@ -112,7 +154,7 @@ const ArtistsTabContent = () => {
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               {editingArtist === artist.name ? (
                 <>
                   <button
@@ -132,13 +174,27 @@ const ArtistsTabContent = () => {
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => startEdit(artist.name)}
-                  className="p-1.5 text-zinc-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                  title="Rename artist"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
+                <>
+                  <button
+                    onClick={() => triggerUpload(artist.name)}
+                    disabled={uploadingArtist === artist.name}
+                    className="p-1.5 text-zinc-400 hover:text-green-400 transition-colors"
+                    title="Upload artist photo"
+                  >
+                    {uploadingArtist === artist.name ? (
+                      <span className="text-xs">...</span>
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => startEdit(artist.name)}
+                    className="p-1.5 text-zinc-400 hover:text-white transition-colors"
+                    title="Rename artist"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </>
               )}
             </div>
           </div>

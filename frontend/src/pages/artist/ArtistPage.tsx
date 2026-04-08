@@ -1,19 +1,25 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { usePlayerStore } from "@/stores/usePlayerStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { SongMenu } from "@/components/SongMenu";
 import { LikeButton } from "@/components/LikeButton";
 import { Play, Pause, Shuffle } from "lucide-react";
 import { formatDuration } from "@/pages/album/AlbumPage";
+import { axiosInstance } from "@/lib/axios";
 
 const ArtistPage = () => {
   const { artistName } = useParams<{ artistName: string }>();
   const { songs, albums, fetchSongs, fetchAlbums } = useMusicStore();
   const { currentSong, isPlaying, playAlbum, togglePlay, toggleShuffle, isShuffle } = usePlayerStore();
+  const { isAdmin } = useAuthStore();
   const navigate = useNavigate();
+
+  const [artistImageUrl, setArtistImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (songs.length === 0) fetchSongs();
@@ -21,6 +27,17 @@ const ArtistPage = () => {
   }, [fetchSongs, fetchAlbums, songs.length, albums.length]);
 
   const decodedName = decodeURIComponent(artistName || "");
+
+  // Fetch artist photo from DB
+  useEffect(() => {
+    if (!decodedName) return;
+    axiosInstance
+      .get(`/admin/artists/${encodeURIComponent(decodedName)}`)
+      .then((res) => {
+        if (res.data?.imageUrl) setArtistImageUrl(res.data.imageUrl);
+      })
+      .catch(() => {});
+  }, [decodedName]);
 
   const artistSongs = useMemo(() => {
     return songs.filter((song) =>
@@ -34,7 +51,8 @@ const ArtistPage = () => {
     );
   }, [albums, decodedName]);
 
-  const coverImage = artistSongs[0]?.imageUrl || artistAlbums[0]?.imageUrl;
+  const fallbackImage = artistSongs[0]?.imageUrl || artistAlbums[0]?.imageUrl;
+  const bannerImage = artistImageUrl || fallbackImage;
 
   const isArtistPlaying =
     artistSongs.some((s) => s._id === currentSong?._id) && isPlaying;
@@ -52,6 +70,28 @@ const ArtistPage = () => {
     if (!isShuffle) toggleShuffle();
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", decodedName);
+      formData.append("imageFile", file);
+      const res = await axiosInstance.post("/admin/artists/image", formData);
+      setArtistImageUrl(res.data.imageUrl);
+      import("react-hot-toast").then(({ default: toast }) =>
+        toast.success("Artist photo updated!")
+      );
+    } catch {
+      import("react-hot-toast").then(({ default: toast }) =>
+        toast.error("Failed to upload photo")
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (artistSongs.length === 0 && artistAlbums.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -65,42 +105,64 @@ const ArtistPage = () => {
       <ScrollArea className="h-full">
         <div className="relative min-h-full bg-zinc-950">
 
-          {/* ── Hero Banner (Apple Music style) ── */}
-          <div className="relative w-full h-56 sm:h-72 overflow-hidden">
-            {coverImage && (
+          {/* ── Hero Banner ── */}
+          <div className="relative w-full aspect-[4/3] sm:aspect-[16/7] overflow-hidden bg-zinc-900">
+            {bannerImage && (
               <img
-                src={coverImage}
+                src={bannerImage}
                 alt={decodedName}
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-contain sm:object-cover object-center"
               />
             )}
-            {/* Dark gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
 
-            {/* Artist name overlaid at bottom left */}
-            <div className="absolute bottom-4 left-4 right-4">
-              <p className="text-xs font-semibold uppercase text-zinc-300 mb-1 tracking-widest">Artist</p>
-              <h1 className="text-3xl sm:text-5xl font-bold text-white drop-shadow-lg leading-tight">
-                {decodedName}
-              </h1>
-              <p className="text-zinc-400 text-sm mt-1">{artistSongs.length} songs</p>
+            {/* Admin upload button */}
+            {isAdmin && (
+              <label className="absolute top-3 right-3 cursor-pointer bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-1.5 rounded-full transition-colors">
+                {uploading ? "Uploading..." : "📷 Change Photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </label>
+            )}
+
+            {/* Artist info + play button at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase text-zinc-300 tracking-widest mb-1">
+                  Artist
+                </p>
+                <h1 className="text-2xl sm:text-5xl font-bold text-white drop-shadow-lg leading-tight">
+                  {decodedName}
+                </h1>
+                <p className="text-zinc-300 text-sm mt-1">
+                  {artistSongs.length} songs
+                </p>
+              </div>
+
+              {/* Play button floated right like Apple Music */}
+              <Button
+                onClick={handlePlay}
+                size="icon"
+                className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all flex-shrink-0 shadow-xl"
+                disabled={artistSongs.length === 0}
+              >
+                {isArtistPlaying ? (
+                  <Pause className="h-6 w-6 text-black" />
+                ) : (
+                  <Play className="h-6 w-6 text-black" />
+                )}
+              </Button>
             </div>
           </div>
 
-          {/* ── Controls ── */}
-          <div className="flex items-center gap-4 px-4 sm:px-8 py-4">
-            <Button
-              onClick={handlePlay}
-              size="icon"
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-400 hover:scale-105 transition-all"
-              disabled={artistSongs.length === 0}
-            >
-              {isArtistPlaying ? (
-                <Pause className="h-5 w-5 text-black" />
-              ) : (
-                <Play className="h-5 w-5 text-black" />
-              )}
-            </Button>
+          {/* ── Shuffle control ── */}
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-3">
             <Button
               onClick={handleShuffle}
               size="icon"
@@ -109,13 +171,14 @@ const ArtistPage = () => {
             >
               <Shuffle className="h-5 w-5" />
             </Button>
+            <span className="text-xs text-zinc-500">Shuffle</span>
           </div>
 
           {/* ── Albums ── */}
           {artistAlbums.length > 0 && (
-            <div className="px-4 sm:px-8 mb-8">
+            <div className="px-4 sm:px-6 mb-8">
               <h2 className="text-base font-bold text-white mb-4">Albums</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {artistAlbums.map((album) => (
                   <div
                     key={album._id}
@@ -136,7 +199,7 @@ const ArtistPage = () => {
           )}
 
           {/* ── Songs ── */}
-          <div className="px-4 sm:px-8 pb-8">
+          <div className="px-4 sm:px-6 pb-8">
             <h2 className="text-base font-bold text-white mb-4">Songs</h2>
             <div className="space-y-1">
               {artistSongs.map((song, index) => {

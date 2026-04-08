@@ -8,6 +8,8 @@ import {
   updateAlbum,
   addSongsToAlbum,
   renameArtist,
+  upsertArtistImage,
+  getArtistByName,
 } from "../controller/admin.controller.js";
 import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
@@ -27,5 +29,7 @@ router.delete("/albums/:id", deleteAlbum);
 router.post("/albums/:albumId/songs", addSongsToAlbum);
 
 router.post("/artists/rename", renameArtist);
+router.post("/artists/image", upsertArtistImage);
+router.get("/artists/:name", getArtistByName);
 
 export default router;

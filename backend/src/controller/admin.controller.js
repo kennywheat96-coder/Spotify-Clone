@@ -1,5 +1,6 @@
 import { Song } from "../models/song.model.js";
 import { Album } from "../models/album.model.js";
+import { Artist } from "../models/artist.model.js";
 import cloudinary from "../lib/cloudinary.js";
 
 const uploadToCloudinary = async (file) => {
@@ -208,10 +209,51 @@ export const renameArtist = async (req, res, next) => {
       { $set: { artist: newName } }
     );
 
+    // Also update artist doc if it exists
+    await Artist.findOneAndUpdate(
+      { name: oldName },
+      { name: newName }
+    );
+
     res.json({
       message: `Renamed "${oldName}" to "${newName}"`,
       songsUpdated: result.modifiedCount,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const upsertArtistImage = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Artist name is required" });
+
+    let imageUrl;
+    if (req.files?.imageFile) {
+      const uploaded = await cloudinary.uploader.upload(req.files.imageFile.tempFilePath, {
+        resource_type: "image",
+      });
+      imageUrl = uploaded.secure_url;
+    }
+
+    const artist = await Artist.findOneAndUpdate(
+      { name },
+      { name, ...(imageUrl && { imageUrl }) },
+      { upsert: true, new: true }
+    );
+
+    res.json(artist);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getArtistByName = async (req, res, next) => {
+  try {
+    const name = decodeURIComponent(req.params.name);
+    const artist = await Artist.findOne({ name });
+    res.json(artist || null);
   } catch (error) {
     next(error);
   }

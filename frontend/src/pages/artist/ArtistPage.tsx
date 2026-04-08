@@ -8,7 +8,7 @@ import { SongMenu } from "@/components/SongMenu";
 import { LikeButton } from "@/components/LikeButton";
 import { Play, Pause, Shuffle } from "lucide-react";
 import { formatDuration } from "@/pages/album/AlbumPage";
-import type { Song } from "@/types";
+
 
 const ArtistPage = () => {
   const { artistName } = useParams<{ artistName: string }>();

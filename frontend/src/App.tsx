@@ -11,6 +11,7 @@ import PlaylistPage from "./pages/Playlist/PlaylistPage";
 import LikedSongsPage from "./pages/liked/LikedSongsPage";
 import LibraryPage from "./pages/library/LibraryPage";
 import SearchPage from "./pages/search/SearchPage";
+import ArtistPage from "./pages/artist/ArtistPage";
 import { Toaster } from "react-hot-toast";
 import NotFoundPage from "./pages/404/NotFoundPage";
 import { PageTransition } from "./components/PageTransition";
@@ -21,7 +22,6 @@ function App() {
 
   return (
     <>
-      {/* AudioPlayer lives here so it never unmounts on route changes */}
       <AudioPlayer />
 
       <AnimatePresence mode="wait">
@@ -37,6 +37,7 @@ function App() {
             <Route path='/' element={<PageTransition><HomePage /></PageTransition>} />
             <Route path='/chat' element={<PageTransition><ChatPage /></PageTransition>} />
             <Route path='/albums/:albumId' element={<PageTransition><AlbumPage /></PageTransition>} />
+            <Route path='/artists/:artistName' element={<PageTransition><ArtistPage /></PageTransition>} />
             <Route path='/playlists/:playlistId' element={<PageTransition><PlaylistPage /></PageTransition>} />
             <Route path='/liked' element={<PageTransition><LikedSongsPage /></PageTransition>} />
             <Route path='/library' element={<PageTransition><LibraryPage /></PageTransition>} />

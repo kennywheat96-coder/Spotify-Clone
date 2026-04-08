@@ -114,13 +114,17 @@ const SearchPage = () => {
             </div>
             <div className='space-y-1'>
               {artists.map((artist) => (
-                <div key={artist.name} className='flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer'>
+                <Link
+                  key={artist.name}
+                  to={`/artists/${encodeURIComponent(artist.name)}`}
+                  className='flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800 transition-colors'
+                >
                   <img src={artist.imageUrl} alt={artist.name} className='w-12 h-12 rounded-full object-cover flex-shrink-0' />
                   <div className='flex-1 min-w-0'>
                     <p className='text-sm font-semibold text-white truncate'>{artist.name}</p>
                     <p className='text-xs text-zinc-400'>{artist.songCount} song{artist.songCount !== 1 ? "s" : ""}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </section>

@@ -7,6 +7,7 @@ import {
   deleteAlbum,
   updateAlbum,
   addSongsToAlbum,
+  renameArtist,
 } from "../controller/admin.controller.js";
 import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
@@ -24,5 +25,7 @@ router.post("/albums", createAlbum);
 router.put("/albums/:id", updateAlbum);
 router.delete("/albums/:id", deleteAlbum);
 router.post("/albums/:albumId/songs", addSongsToAlbum);
+
+router.post("/artists/rename", renameArtist);
 
 export default router;

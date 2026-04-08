@@ -130,6 +130,7 @@ export const addSongsToAlbum = async (req, res, next) => {
 export const checkAdmin = async (req, res, next) => {
   res.status(200).json({ admin: true });
 };
+
 export const updateSong = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -190,6 +191,27 @@ export const updateAlbum = async (req, res, next) => {
     if (!album) return res.status(404).json({ message: "Album not found" });
 
     res.json(album);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const renameArtist = async (req, res, next) => {
+  try {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName) {
+      return res.status(400).json({ message: "oldName and newName are required" });
+    }
+
+    const result = await Song.updateMany(
+      { artist: oldName },
+      { $set: { artist: newName } }
+    );
+
+    res.json({
+      message: `Renamed "${oldName}" to "${newName}"`,
+      songsUpdated: result.modifiedCount,
+    });
   } catch (error) {
     next(error);
   }

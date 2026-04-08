@@ -1,11 +1,12 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import Header from "./components/Header";
 import DashboardStats from "./components/DashboardStats";
-import { Album, Music, Music2 } from "lucide-react";
+import { Album, Music, Music2, Mic2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SongsTabContent from "./components/SongsTabContent";
 import AlbumsTabContent from "./components/AlbumsTabContent";
 import RequestsTabContent from "./components/RequestsTabContent";
+import ArtistsTabContent from "./components/ArtistsTabContent";
 import { useEffect } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { useRequestStore } from "@/stores/useRequestStore";
@@ -18,14 +19,12 @@ const AdminPage = () => {
   const { requests, fetchAllRequests } = useRequestStore();
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  // Step 1: register getToken so all axios requests get fresh tokens
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     setGetTokenFn(getToken);
     checkAdminStatus();
   }, [isLoaded, isSignedIn, getToken, checkAdminStatus]);
 
-  // Step 2: once confirmed admin, fetch data
   useEffect(() => {
     if (!isAdmin) return;
     fetchAlbums();
@@ -63,6 +62,10 @@ const AdminPage = () => {
             <Album className='mr-2 size-4' />
             Albums
           </TabsTrigger>
+          <TabsTrigger value='artists' className='data-[state=active]:bg-zinc-700'>
+            <Mic2 className='mr-2 size-4' />
+            Artists
+          </TabsTrigger>
           <TabsTrigger value='requests' className='data-[state=active]:bg-zinc-700'>
             <Music2 className='mr-2 size-4' />
             Requests
@@ -79,6 +82,9 @@ const AdminPage = () => {
         </TabsContent>
         <TabsContent value='albums'>
           <AlbumsTabContent />
+        </TabsContent>
+        <TabsContent value='artists'>
+          <ArtistsTabContent />
         </TabsContent>
         <TabsContent value='requests'>
           <RequestsTabContent />

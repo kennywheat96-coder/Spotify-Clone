@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { axiosInstance } from "@/lib/axios";
 import { Search, Pencil, Check, X, Camera } from "lucide-react";
@@ -13,6 +13,7 @@ const ArtistsTabContent = () => {
   const [newName, setNewName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingArtist, setUploadingArtist] = useState<string | null>(null);
+  const [artistPhotos, setArtistPhotos] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadingForArtist = useRef<string | null>(null);
 
@@ -26,6 +27,26 @@ const ArtistsTabContent = () => {
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
   }, [songs]);
+
+  // Fetch uploaded artist photos
+  useEffect(() => {
+    if (artists.length === 0) return;
+    const fetchPhotos = async () => {
+      const photos: Record<string, string> = {};
+      await Promise.all(
+        artists.map(async (artist) => {
+          try {
+            const res = await axiosInstance.get(`/admin/artists/${encodeURIComponent(artist.name)}`);
+            if (res.data?.imageUrl) photos[artist.name] = res.data.imageUrl;
+} catch {
+  // artist not found, use default image
+}
+        })
+      );
+      setArtistPhotos(photos);
+    };
+    fetchPhotos();
+  }, [artists]);
 
   const filtered = artists.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase())
@@ -63,8 +84,9 @@ const ArtistsTabContent = () => {
       const formData = new FormData();
       formData.append("name", artistName);
       formData.append("imageFile", file);
-      await axiosInstance.post("/admin/artists/image", formData);
+      const res = await axiosInstance.post("/admin/artists/image", formData);
       toast.success(`Photo updated for ${artistName}`);
+      setArtistPhotos((prev) => ({ ...prev, [artistName]: res.data.imageUrl }));
     } catch {
       toast.error("Failed to upload photo");
     } finally {
@@ -123,7 +145,7 @@ const ArtistsTabContent = () => {
           >
             {/* Avatar */}
             <img
-              src={artist.imageUrl}
+              src={artistPhotos[artist.name] || artist.imageUrl}
               alt={artist.name}
               className="w-10 h-10 rounded-full object-cover flex-shrink-0 cursor-pointer"
               onClick={() => navigate(`/artists/${encodeURIComponent(artist.name)}`)}

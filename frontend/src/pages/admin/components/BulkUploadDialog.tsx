@@ -121,6 +121,10 @@ const BulkUploadDialog = () => {
 
     const newSongs: BulkSong[] = [];
 
+    // Get the group and its assigned album artist
+    const group = groups.find((g) => g.id === targetGroupId);
+    const assignedAlbum = albums.find((a) => a._id === group?.albumId);
+
     for (const file of sortedFiles) {
       if (!file.type.startsWith("audio/")) continue;
 
@@ -150,11 +154,14 @@ const BulkUploadDialog = () => {
         duration = await parseDuration(file);
       }
 
+      // If group has an album assigned, use that album's artist
+      const finalArtist = assignedAlbum ? assignedAlbum.artist : artist;
+
       newSongs.push({
         id: Math.random().toString(36).slice(2),
         audioFile: file,
         title,
-        artist,
+        artist: finalArtist,
         duration,
         albumId: "none",
         status: "pending",
@@ -235,8 +242,27 @@ const BulkUploadDialog = () => {
     );
   };
 
+  const applyAlbumArtist = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    const assignedAlbum = albums.find((a) => a._id === group?.albumId);
+    if (!assignedAlbum) return;
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              songs: g.songs.map((s) => ({
+                ...s,
+                artist: assignedAlbum.artist,
+              })),
+            }
+          : g
+      )
+    );
+    toast.success(`Set all artists to "${assignedAlbum.artist}"`);
+  };
+
   const uploadAll = async () => {
-    // Auto-fill empty artist from folder name and empty title from filename
     const filledGroups = groups.map((g) => ({
       ...g,
       songs: g.songs.map((s) => ({
@@ -462,6 +488,18 @@ const BulkUploadDialog = () => {
                       </ScrollArea>
                     </SelectContent>
                   </Select>
+
+                  {/* Use Album Artist button */}
+                  {group.albumId !== "none" && (
+                    <button
+                      onClick={() => applyAlbumArtist(group.id)}
+                      className='text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap'
+                      title='Set all songs to album artist'
+                      disabled={isUploading}
+                    >
+                      Use Album Artist
+                    </button>
+                  )}
 
                   {/* Add songs button */}
                   <button

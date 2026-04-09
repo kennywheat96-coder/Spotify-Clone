@@ -28,7 +28,6 @@ const ArtistPage = () => {
 
   const decodedName = decodeURIComponent(artistName || "");
 
-  // Fetch artist photo from DB
   useEffect(() => {
     if (!decodedName) return;
     axiosInstance
@@ -106,20 +105,29 @@ const ArtistPage = () => {
         <div className="relative min-h-full bg-zinc-950">
 
           {/* ── Hero Banner ── */}
-          <div className="relative w-full aspect-[4/3] sm:aspect-[16/7] overflow-hidden bg-zinc-900">
+          <div className="relative w-full h-48 sm:h-72 overflow-hidden bg-zinc-900">
             {bannerImage && (
-              <img
-                src={bannerImage}
-                alt={decodedName}
-                className="w-full h-full object-contain sm:object-cover object-center"
-              />
+              <>
+                {/* Blurred background fill */}
+                <img
+                  src={bannerImage}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-lg opacity-60"
+                />
+                {/* Main image */}
+                <img
+                  src={bannerImage}
+                  alt={decodedName}
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+              </>
             )}
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
 
             {/* Admin upload button */}
             {isAdmin && (
-              <label className="absolute top-3 right-3 cursor-pointer bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-1.5 rounded-full transition-colors">
+              <label className="absolute top-3 right-3 cursor-pointer bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-1.5 rounded-full transition-colors z-10">
                 {uploading ? "Uploading..." : "📷 Change Photo"}
                 <input
                   type="file"
@@ -131,7 +139,7 @@ const ArtistPage = () => {
               </label>
             )}
 
-            {/* Artist info + play button at bottom */}
+            {/* Artist info + play button */}
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 flex items-end justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-300 tracking-widest mb-1">
@@ -144,8 +152,6 @@ const ArtistPage = () => {
                   {artistSongs.length} songs
                 </p>
               </div>
-
-              {/* Play button floated right like Apple Music */}
               <Button
                 onClick={handlePlay}
                 size="icon"
@@ -188,7 +194,7 @@ const ArtistPage = () => {
                     <img
                       src={album.imageUrl}
                       alt={album.title}
-                      className="w-full aspect-square object-cover rounded-lg mb-2 group-hover:opacity-80 transition-opacity shadow-md"
+                      className="w-full aspect-square object-contain bg-zinc-800 rounded-lg mb-2 group-hover:opacity-80 transition-opacity shadow-md"
                     />
                     <p className="text-sm font-medium text-white truncate">{album.title}</p>
                     <p className="text-xs text-zinc-400">{album.releaseYear}</p>

@@ -116,8 +116,7 @@ const ArtistPage = () => {
                 <img
                   src={bannerImage}
                   alt={decodedName}
-                  className="absolute inset-0 w-full h-full object-cover object-center"
-                />
+className="absolute inset-0 w-full h-full object-contain object-center"                />
               </>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />

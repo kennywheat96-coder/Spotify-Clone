@@ -76,11 +76,13 @@ export const searchSongs = async (req, res, next) => {
       .select("_id title artist imageUrl audioUrl albumId duration");
 
     const artistDocs = await Song.aggregate([
-      { $match: { artist: { $regex: query, $options: "i" } } },
-      { $group: { _id: "$artist", imageUrl: { $first: "$imageUrl" }, songCount: { $sum: 1 } } },
-      { $limit: 5 },
-      { $project: { _id: 0, name: "$_id", imageUrl: 1, songCount: 1 } },
-    ]);
+  { $match: { artist: { $regex: query, $options: "i" } } },
+  { $group: { _id: "$artist", imageUrl: { $first: "$imageUrl" }, songCount: { $sum: 1 } } },
+  // Filter out collab artist names
+  { $match: { _id: { $not: /(&|feat\.?|ft\.?|\bx\b|,)/i } } },
+  { $limit: 5 },
+  { $project: { _id: 0, name: "$_id", imageUrl: 1, songCount: 1 } },
+]);
 
     // Merge uploaded artist photos if they exist
     const artistNames = artistDocs.map((a) => a.name);

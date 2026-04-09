@@ -38,15 +38,23 @@ const ArtistPage = () => {
   }, [decodedName]);
 
   const artistSongs = useMemo(() => {
-    return songs.filter((song) =>
-      song.artist.toLowerCase().includes(decodedName.toLowerCase())
-    );
+    return songs.filter((song) => {
+      const parts = song.artist
+        .toLowerCase()
+        .split(/&|,|\bx\b|\bfeat\.?\b|\bft\.?\b/)
+        .map((p) => p.trim());
+      return parts.some((p) => p === decodedName.toLowerCase());
+    });
   }, [songs, decodedName]);
 
   const artistAlbums = useMemo(() => {
-    return albums.filter((album) =>
-      album.artist.toLowerCase().includes(decodedName.toLowerCase())
-    );
+    return albums.filter((album) => {
+      const parts = album.artist
+        .toLowerCase()
+        .split(/&|,|\bx\b|\bfeat\.?\b|\bft\.?\b/)
+        .map((p) => p.trim());
+      return parts.some((p) => p === decodedName.toLowerCase());
+    });
   }, [albums, decodedName]);
 
   const fallbackImage = artistSongs[0]?.imageUrl || artistAlbums[0]?.imageUrl;
@@ -111,7 +119,7 @@ const ArtistPage = () => {
               alt=""
               className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-50"
             />
-            {/* Main image — contain so nothing is cropped */}
+            {/* Main image */}
             <img
               src={bannerImage}
               alt={decodedName}

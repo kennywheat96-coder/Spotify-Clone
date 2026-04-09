@@ -209,7 +209,6 @@ export const renameArtist = async (req, res, next) => {
       { $set: { artist: newName } }
     );
 
-    // Also update artist doc if it exists
     await Artist.findOneAndUpdate(
       { name: oldName },
       { name: newName }
@@ -254,6 +253,26 @@ export const getArtistByName = async (req, res, next) => {
     const name = decodeURIComponent(req.params.name);
     const artist = await Artist.findOne({ name });
     res.json(artist || null);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fixAlbumSongArtists = async (req, res, next) => {
+  try {
+    const { albumId } = req.params;
+    const album = await Album.findById(albumId);
+    if (!album) return res.status(404).json({ message: "Album not found" });
+
+    const result = await Song.updateMany(
+      { albumId: albumId },
+      { $set: { artist: album.artist } }
+    );
+
+    res.json({
+      message: `Fixed ${result.modifiedCount} songs to artist "${album.artist}"`,
+      modifiedCount: result.modifiedCount,
+    });
   } catch (error) {
     next(error);
   }

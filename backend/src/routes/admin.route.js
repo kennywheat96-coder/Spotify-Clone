@@ -10,6 +10,7 @@ import {
   renameArtist,
   upsertArtistImage,
   getArtistByName,
+  fixAlbumSongArtists,
 } from "../controller/admin.controller.js";
 import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
@@ -27,6 +28,7 @@ router.post("/albums", createAlbum);
 router.put("/albums/:id", updateAlbum);
 router.delete("/albums/:id", deleteAlbum);
 router.post("/albums/:albumId/songs", addSongsToAlbum);
+router.post("/albums/:albumId/fix-artists", fixAlbumSongArtists);
 
 router.post("/artists/rename", renameArtist);
 router.post("/artists/image", upsertArtistImage);

@@ -105,22 +105,27 @@ const ArtistPage = () => {
         <div className="relative min-h-full bg-zinc-950">
 
           {/* ── Hero Banner ── */}
-          <div className="relative w-full h-48 sm:h-72 overflow-hidden bg-zinc-900">
+          <div className="relative w-full h-64 sm:h-80 overflow-hidden bg-zinc-900">
             {bannerImage && (
               <>
+                {/* Blurred background fill */}
                 <img
                   src={bannerImage}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover scale-110 blur-lg opacity-60"
                 />
+                {/* Main image */}
                 <img
                   src={bannerImage}
                   alt={decodedName}
-className="absolute inset-0 w-full h-full object-contain object-center"                />
+                  className="absolute inset-0 w-full h-full object-cover object-top scale-100"
+                />
               </>
             )}
+            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
 
+            {/* Admin upload button */}
             {isAdmin && (
               <label className="absolute top-3 right-3 cursor-pointer bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-1.5 rounded-full transition-colors z-10">
                 {uploading ? "Uploading..." : "📷 Change Photo"}
@@ -134,6 +139,7 @@ className="absolute inset-0 w-full h-full object-contain object-center"         
               </label>
             )}
 
+            {/* Artist info + play button */}
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 flex items-end justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-300 tracking-widest mb-1">
@@ -178,7 +184,10 @@ className="absolute inset-0 w-full h-full object-contain object-center"         
           {artistAlbums.length > 0 && (
             <div className="mb-8">
               <h2 className="text-base font-bold text-white mb-4 px-4 sm:px-6">Albums</h2>
-              <div className="flex gap-3 overflow-x-auto px-4 sm:px-6 pb-2 scrollbar-hide">
+              <div
+                className="flex gap-3 px-4 sm:px-6 pb-2"
+                style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+              >
                 {artistAlbums.map((album) => (
                   <div
                     key={album._id}

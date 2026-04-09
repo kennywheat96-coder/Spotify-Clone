@@ -1,5 +1,6 @@
 import { Song } from "../models/song.model.js";
 import { Album } from "../models/album.model.js";
+import { Artist } from "../models/artist.model.js";
 
 export const getAllSongs = async (req, res, next) => {
   try {
@@ -81,13 +82,23 @@ export const searchSongs = async (req, res, next) => {
       { $project: { _id: 0, name: "$_id", imageUrl: 1, songCount: 1 } },
     ]);
 
+    // Merge uploaded artist photos if they exist
+    const artistNames = artistDocs.map((a) => a.name);
+    const uploadedArtists = await Artist.find({ name: { $in: artistNames } });
+    const uploadedMap = new Map(uploadedArtists.map((a) => [a.name, a.imageUrl]));
+
+    const artists = artistDocs.map((a) => ({
+      ...a,
+      imageUrl: uploadedMap.get(a.name) || a.imageUrl,
+    }));
+
     const albums = await Album.find({
       $or: [{ title: regex }, { artist: regex }],
     })
       .limit(5)
       .select("_id title artist imageUrl");
 
-    res.json({ songs, artists: artistDocs, albums });
+    res.json({ songs, artists, albums });
   } catch (error) {
     next(error);
   }

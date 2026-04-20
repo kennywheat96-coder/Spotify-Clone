@@ -7,9 +7,11 @@ import { QueuePanel } from "./components/QueuePanel";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { useEffect, useState } from "react";
 import { AuthInterceptor } from "@/lib/AuthInterceptor";
+import { usePlayerStore } from "@/stores/usePlayerStore";
 
 const MainLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
+  const { currentSong } = usePlayerStore();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -54,7 +56,7 @@ const MainLayout = () => {
       {/* Mobile layout */}
       {isMobile && (
         <>
-          <div className='flex-1 overflow-y-auto pb-36'>
+          <div className={`flex-1 overflow-y-auto ${currentSong ? "pb-36" : "pb-16"}`}>
             <Outlet />
           </div>
 

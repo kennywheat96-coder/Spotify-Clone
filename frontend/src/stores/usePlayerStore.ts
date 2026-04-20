@@ -211,7 +211,7 @@ export const usePlayerStore = create<PlayerStore>()(
       toggleQueue: () => set((s) => ({ isQueueVisible: !s.isQueueVisible })),
     }),
     {
-      name: "player-storage",
+name: "player-storage-v2",
       partialize: (state) => ({
         queue: state.queue,
         currentIndex: state.currentIndex,

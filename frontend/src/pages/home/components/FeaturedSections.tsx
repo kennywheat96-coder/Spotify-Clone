@@ -6,20 +6,20 @@ import { Play, Pause } from "lucide-react";
 
 const FeaturedSection = () => {
   const { isLoading, featuredSongs, error } = useMusicStore();
-  const { currentSong, isPlaying, setCurrentSong, togglePlay } = usePlayerStore();
+  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
 
   if (isLoading) return <FeaturedGridSkeleton />;
   if (error) return <p className='text-red-500 mb-4 text-lg'>{error}</p>;
 
   return (
     <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8'>
-      {featuredSongs.map((song) => {
+      {featuredSongs.map((song, index) => {
         const isCurrentSong = currentSong?._id === song._id;
 
         const handlePlay = (e: React.MouseEvent) => {
           e.stopPropagation();
           if (isCurrentSong) togglePlay();
-          else setCurrentSong(song);
+          else playAlbum(featuredSongs, index);
         };
 
         return (
@@ -28,7 +28,6 @@ const FeaturedSection = () => {
             className='flex items-center bg-zinc-800/50 rounded-md overflow-hidden hover:bg-zinc-700/50 transition-colors group cursor-pointer relative'
             onClick={handlePlay}
           >
-            {/* Album art with play button overlay */}
             <div className='relative flex-shrink-0'>
               <img
                 src={song.imageUrl}
@@ -47,13 +46,11 @@ const FeaturedSection = () => {
               </div>
             </div>
 
-            {/* Song info */}
             <div className='flex-1 p-4 min-w-0'>
               <p className='font-medium truncate'>{song.title}</p>
               <p className='text-sm text-zinc-400 truncate'>{song.artist}</p>
             </div>
 
-            {/* 3-dot menu */}
             <div className='pr-2 flex-shrink-0' onClick={(e) => e.stopPropagation()}>
               <SongMenu song={song} />
             </div>

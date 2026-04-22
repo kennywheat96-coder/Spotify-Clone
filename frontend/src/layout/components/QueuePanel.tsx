@@ -48,13 +48,12 @@ export const QueuePanel = () => {
   const handlePointerMove = (e: React.PointerEvent) => {
     const deltaY = Math.abs(e.clientY - pointerStartY.current);
 
-    if (deltaY > 8 && longPressTimer.current) {
+    if (deltaY > 30 && longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
 
-    if (dragFromIndex.current === null) return;
-    if (deltaY < 30) return;
+    if (dragFromIndex.current === null || deltaY < 30) return;
 
     isDragging.current = true;
     setDraggingIndex(dragFromIndex.current);
@@ -116,11 +115,7 @@ export const QueuePanel = () => {
             <div>
               <p className="text-xs text-zinc-400 uppercase tracking-wider mb-3">Now Playing</p>
               <div className="flex items-center gap-3 bg-zinc-800 rounded-md p-2">
-                <img
-                  src={currentSong.imageUrl}
-                  alt={currentSong.title}
-                  className="w-10 h-10 rounded object-cover"
-                />
+                <img src={currentSong.imageUrl} alt={currentSong.title} className="w-10 h-10 rounded object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-green-400 truncate">{currentSong.title}</p>
                   <p className="text-xs text-zinc-400 truncate">{currentSong.artist}</p>
@@ -135,7 +130,7 @@ export const QueuePanel = () => {
               <p className="text-xs text-zinc-400 uppercase tracking-wider mb-3">
                 Next Up ({upNext.length})
               </p>
-              <p className="text-xs text-zinc-600 mb-2">Drag to reorder · Hold to play next</p>
+              <p className="text-xs text-zinc-600 mb-2">Drag grip to reorder · Hold grip to play next</p>
               <div className="space-y-1" ref={containerRef}>
                 {upNext.map((song, i) => {
                   const absoluteIndex = currentIndex + 1 + i;
@@ -146,23 +141,32 @@ export const QueuePanel = () => {
                     <div
                       key={`${song._id}-${i}`}
                       data-queue-item={absoluteIndex}
-                      onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
-                      onPointerMove={(e) => handlePointerMove(e)}
-                      onPointerUp={handlePointerUp}
-                      onPointerCancel={handlePointerUp}
                       className={`flex items-center gap-3 p-2 rounded-md group transition-all select-none
                         ${isBeingDragged ? "opacity-40 bg-zinc-700" : "hover:bg-zinc-800"}
                         ${isDropTarget ? "border-t-2 border-green-500" : ""}
                       `}
-                       style={{ touchAction: "pan-y" }}                    >
-                      <GripVertical className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0 transition-colors" />
+                    >
+                      {/* Drag handle — pointer events only here */}
+                      <div
+                        onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
+                        onPointerMove={(e) => handlePointerMove(e)}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        style={{ touchAction: "none" }}
+                        className="cursor-grab active:cursor-grabbing p-1 -ml-1 flex-shrink-0"
+                      >
+                        <GripVertical className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                      </div>
 
                       <img
                         src={song.imageUrl}
                         alt={song.title}
                         className="w-9 h-9 rounded object-cover flex-shrink-0 pointer-events-none"
                       />
-                      <div className="flex-1 min-w-0 pointer-events-none">
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setCurrentSong(song)}
+                      >
                         <p className="text-sm text-white truncate group-hover:text-green-400 transition-colors">
                           {song.title}
                         </p>

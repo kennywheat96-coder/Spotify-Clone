@@ -23,7 +23,7 @@ export const PlaybackControls = () => {
     repeatMode, cycleRepeat,
     isQueueVisible, toggleQueue,
     queue, currentIndex,
-removeFromQueue, reorderQueue, moveToFirst,
+    removeFromQueue, reorderQueue, moveToFirst,
   } = usePlayerStore();
 
   const [volume, setVolume] = useState(75);
@@ -78,7 +78,7 @@ removeFromQueue, reorderQueue, moveToFirst,
     if (audioRef.current) audioRef.current.volume = newVolume / 100;
   };
 
-  // Mobile queue pointer handlers
+  // Mobile queue pointer handlers — only on grip handle
   const handlePointerDown = (e: React.PointerEvent, absoluteIndex: number) => {
     longPressTimer.current = setTimeout(() => {
       if (!isDragging.current) {
@@ -100,7 +100,7 @@ removeFromQueue, reorderQueue, moveToFirst,
       longPressTimer.current = null;
     }
 
-    if (dragFromIndex.current === null || deltaY < 8) return;
+    if (dragFromIndex.current === null || deltaY < 30) return;
 
     isDragging.current = true;
     setDraggingIndex(dragFromIndex.current);
@@ -327,7 +327,7 @@ removeFromQueue, reorderQueue, moveToFirst,
                       <p className='text-xs text-zinc-400 uppercase tracking-wider mb-1'>
                         Next Up ({upNext.length})
                       </p>
-                      <p className='text-xs text-zinc-600 mb-2'>Drag to reorder · Hold to play next</p>
+                      <p className='text-xs text-zinc-600 mb-2'>Drag grip to reorder · Hold grip to play next</p>
                       <div className='space-y-1' ref={mobileQueueRef}>
                         {upNext.map((song, i) => {
                           const absoluteIndex = currentIndex + 1 + i;
@@ -338,17 +338,22 @@ removeFromQueue, reorderQueue, moveToFirst,
                             <div
                               key={`${song._id}-${i}`}
                               data-queue-item={absoluteIndex}
-                              onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
-                              onPointerMove={(e) => handlePointerMove(e)}
-                              onPointerUp={handlePointerUp}
-                              onPointerCancel={handlePointerUp}
                               className={`flex items-center gap-3 p-3 rounded-lg select-none transition-all
                                 ${isBeingDragged ? "opacity-40 bg-zinc-700" : "bg-zinc-800/30"}
                                 ${isDropTarget ? "border-t-2 border-green-500" : ""}
                               `}
-                              style={{ touchAction: "pan-y" }}
                             >
-                              <GripVertical className='h-4 w-4 text-zinc-600 flex-shrink-0' />
+                              {/* Drag handle only */}
+                              <div
+                                onPointerDown={(e) => handlePointerDown(e, absoluteIndex)}
+                                onPointerMove={(e) => handlePointerMove(e)}
+                                onPointerUp={handlePointerUp}
+                                onPointerCancel={handlePointerUp}
+                                style={{ touchAction: "none" }}
+                                className="cursor-grab active:cursor-grabbing p-1 -ml-1 flex-shrink-0"
+                              >
+                                <GripVertical className='h-4 w-4 text-zinc-500' />
+                              </div>
                               <img
                                 src={song.imageUrl}
                                 alt={song.title}

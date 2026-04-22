@@ -54,7 +54,7 @@ export const QueuePanel = () => {
     }
 
     if (dragFromIndex.current === null) return;
-    if (deltaY < 20) return;
+    if (deltaY < 30) return;
 
     isDragging.current = true;
     setDraggingIndex(dragFromIndex.current);

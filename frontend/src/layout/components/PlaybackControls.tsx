@@ -346,7 +346,7 @@ removeFromQueue, reorderQueue, moveToFirst,
                                 ${isBeingDragged ? "opacity-40 bg-zinc-700" : "bg-zinc-800/30"}
                                 ${isDropTarget ? "border-t-2 border-green-500" : ""}
                               `}
-                              style={{ touchAction: "none" }}
+                              style={{ touchAction: "pan-y" }}
                             >
                               <GripVertical className='h-4 w-4 text-zinc-600 flex-shrink-0' />
                               <img

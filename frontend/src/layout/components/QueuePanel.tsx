@@ -154,8 +154,7 @@ export const QueuePanel = () => {
                         ${isBeingDragged ? "opacity-40 bg-zinc-700" : "hover:bg-zinc-800"}
                         ${isDropTarget ? "border-t-2 border-green-500" : ""}
                       `}
-                      style={{ touchAction: "none" }}
-                    >
+                       style={{ touchAction: "pan-y" }}                    >
                       <GripVertical className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0 transition-colors" />
 
                       <img

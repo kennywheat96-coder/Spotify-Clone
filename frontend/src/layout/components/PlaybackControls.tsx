@@ -95,7 +95,7 @@ removeFromQueue, reorderQueue, moveToFirst,
   const handlePointerMove = (e: React.PointerEvent) => {
     const deltaY = Math.abs(e.clientY - pointerStartY.current);
 
-    if (deltaY > 8 && longPressTimer.current) {
+    if (deltaY > 20 && longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }

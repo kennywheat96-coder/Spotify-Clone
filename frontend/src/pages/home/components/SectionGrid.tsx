@@ -12,7 +12,7 @@ type SectionGridProps = {
 };
 
 const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
-  const { currentSong, isPlaying, setCurrentSong, togglePlay } = usePlayerStore();
+  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
 
   if (isLoading) return <SectionGridSkeleton />;
 
@@ -26,13 +26,13 @@ const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
       </div>
 
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-        {songs.map((song) => {
+        {songs.map((song, index) => {
           const isCurrentSong = currentSong?._id === song._id;
 
           const handlePlay = (e: React.MouseEvent) => {
             e.stopPropagation();
             if (isCurrentSong) togglePlay();
-            else setCurrentSong(song);
+            else playAlbum(songs, index);
           };
 
           return (
@@ -41,7 +41,6 @@ const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
               className='bg-zinc-800/40 p-4 rounded-md hover:bg-zinc-700/40 transition-all group cursor-pointer'
               onClick={handlePlay}
             >
-              {/* Image with play overlay */}
               <div className='relative mb-4'>
                 <div className='aspect-square rounded-md shadow-lg overflow-hidden'>
                   <img
@@ -62,7 +61,6 @@ const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
                 </div>
               </div>
 
-              {/* Song info + dots */}
               <div className='flex items-start justify-between gap-1'>
                 <div className='min-w-0 flex-1'>
                   <h3 className='font-medium mb-1 truncate'>{song.title}</h3>
